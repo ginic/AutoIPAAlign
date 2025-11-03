@@ -1,0 +1,15 @@
+[project]
+name = "autoipaalign-web"
+version = "0.1.0"
+description = "Gradio web interface for automatic IPA transcription"
+requires-python = ">=3.9"
+dependencies = [
+    "autoipaalign-cli",
+    "gradio",
+]
+
+[tool.uv.sources]
+autoipaalign-cli = { workspace = true }
+
+# Note: ffmpeg is required as a system dependency for audio processing
+# Install via: apt-get install ffmpeg (Linux) or brew install ffmpeg (macOS)

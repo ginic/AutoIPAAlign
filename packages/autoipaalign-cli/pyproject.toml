@@ -1,0 +1,21 @@
+[project]
+name = "autoipaalign-cli"
+version = "0.1.0"
+description = "Core library and CLI for automatic IPA transcription and forced alignment"
+requires-python = ">=3.9"
+dependencies = [
+    "transformers[torch]",
+    "librosa",
+    "tgt",
+    "soundfile",
+    "tyro",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[project.scripts]
+autoipaalign = "autoipaalign_cli.cli:main"
