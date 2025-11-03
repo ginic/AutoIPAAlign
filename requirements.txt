@@ -1,5 +1,0 @@
-ffmpeg
-librosa
-tgt
-transformers[torch]
-soundfile
