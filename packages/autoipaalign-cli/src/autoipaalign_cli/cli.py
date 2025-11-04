@@ -4,9 +4,20 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import tyro
+from transformers import pipeline
 
 
 DEFAULT_MODEL = "ginic/full_dataset_train_3_wav2vec2-large-xlsr-53-buckeye-ipa"
+
+
+@dataclass
+class HuggingFaceModel:
+    """Load a HuggingFace model for speech recognition"""
+
+    model_name: str = DEFAULT_MODEL
+
+    def load(self):
+        return pipeline("automatic-speech-recognition", model=self.model_name)
 
 
 @dataclass

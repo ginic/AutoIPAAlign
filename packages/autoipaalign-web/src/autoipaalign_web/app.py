@@ -71,7 +71,7 @@ def load_model_and_predict(
     except Exception as e:
         raise gr.Error(f"Failed to load model: {str(e)}")
 
-
+# TODO replace with the TextGridContainer.from_audio_and_transcription
 def get_textgrid_contents(audio_in, textgrid_tier_name, transcription_prediction):
     if audio_in is None or transcription_prediction is None:
         return ""
@@ -85,7 +85,7 @@ def get_textgrid_contents(audio_in, textgrid_tier_name, transcription_prediction
     textgrid.add_tier(transcription_tier)
     return tgt.io3.export_to_long_textgrid(textgrid)
 
-
+#TODO replace with TextGridContainer.write_textgrid()
 def write_textgrid(textgrid_contents, textgrid_filename):
     """Writes the text grid contents to a named file in the temporary directory.
     Returns the path for download.
@@ -104,6 +104,7 @@ def get_interactive_download_button(textgrid_contents, textgrid_filename):
     )
 
 
+# TODO Replace with the TextGridContainer.from_textgrid_with_predicted_intervals function
 def transcribe_intervals(audio_in, textgrid_path, source_tier, target_tier, model_state):
     if audio_in is None or textgrid_path is None:
         return "Missing audio or TextGrid input file."
@@ -132,7 +133,7 @@ def transcribe_intervals(audio_in, textgrid_path, source_tier, target_tier, mode
 
     return tgt_str
 
-
+# TODO replace with TextGridContainer.get_tier_names function as much as possible
 def extract_tier_names(textgrid_file):
     try:
         tg = tgt.io.read_textgrid(textgrid_file.name)
