@@ -34,7 +34,7 @@ def test_export_to_long_textgrid_str(sample_textgrid):
     container = TextGridContainer(text_grid=sample_textgrid)
     result = container.export_to_long_textgrid_str()
     assert isinstance(result, str)
-    assert "File type = \"ooTextFile\"" in result
+    assert result == tgt.io3.export_to_long_textgrid(sample_textgrid)
 
 
 def test_get_tier_names(sample_textgrid):
@@ -67,39 +67,62 @@ def test_from_textgrid_file(temp_textgrid_file):
 
 def test_from_audio_and_transcription(mocker):
     """Test creating TextGrid from audio and transcription"""
-    mocker.patch("autoipaalign_cli.textgrid_io.librosa.get_duration", return_value=3.5)
+    mocker.patch("autoipaalign_cli.textgrid_io.librosa.get_duration", return_value=5.5)
 
     result = TextGridContainer.from_audio_and_transcription(
-        audio_in="/path/to/audio.wav",
-        textgrid_tier_name="transcription",
-        transcription="hello world"
+        audio_in="/path/to/audio.wav", textgrid_tier_name="transcription", transcription="hello world"
     )
 
     assert isinstance(result, TextGridContainer)
     assert len(result.text_grid.tiers) == 1
-    assert result.text_grid.tiers[0].name == "transcription"
-    assert result.text_grid.tiers[0].intervals[0].text == "hello world"
+    assert result.text_grid.start_time == 0
+    assert result.text_grid.end_time == 5.5
+    assert len(result.get_tier_names()) == 1
+
+    # Check that the correct tier was added
+    test_tier = result.text_grid.tiers[0]
+    assert test_tier.name == "transcription"
+    assert len(test_tier.intervals) == 1
+    assert test_tier.intervals[0].text == "hello world"
+    assert test_tier.intervals[0].start_time == 0
+    assert test_tier.intervals[0].end_time == 5.5
 
 
 def test_from_textgrid_with_predicted_intervals(mocker, temp_textgrid_file):
-    """Test creating TextGrid with ASR predictions"""
+    """Test creating TextGrid with mock ASR predictions"""
     mocker.patch("autoipaalign_cli.textgrid_io.librosa.load", return_value=([0.1, 0.2, 0.3], 16000))
     mocker.patch("autoipaalign_cli.textgrid_io.sf.write")
     mocker.patch("autoipaalign_cli.textgrid_io.os.path.exists", return_value=True)
     mock_remove = mocker.patch("autoipaalign_cli.textgrid_io.os.remove")
 
     mock_pipeline = mocker.Mock()
-    mock_pipeline.return_value = {"text": "həˈloʊ"}
+    mock_pipeline.return_value = {"text": "həloʊ"}
 
     result = TextGridContainer.from_textgrid_with_predicted_intervals(
         audio_in="/path/to/audio.wav",
         textgrid_path=temp_textgrid_file,
         source_tier="words",
         target_tier="ipa",
-        asr_pipeline=mock_pipeline
+        asr_pipeline=mock_pipeline,
     )
 
+    # Check that word tier is still present
     assert isinstance(result, TextGridContainer)
     assert len(result.text_grid.tiers) == 2
-    assert result.text_grid.get_tier_by_name("ipa").intervals[0].text == "həˈloʊ"
-    mock_remove.assert_called()
+    tier_names = result.get_tier_names()
+    assert set(tier_names) == set(["words", "ipa"])
+
+    # The same mocked prediction was added at different intervals
+    interval1 = result.text_grid.get_tier_by_name("ipa").intervals[0]
+    assert interval1.text == "həloʊ"
+    assert interval1.start_time == 0
+    assert interval1.end_time == 2.5
+
+    interval2 = result.text_grid.get_tier_by_name("ipa").intervals[1]
+    assert interval2.text == "həloʊ"
+    assert interval2.start_time == 2.5
+    assert interval2.end_time == 5.0
+
+    # Prediction and temp file removal both happened twice
+    assert mock_pipeline.call_count == 2
+    assert mock_remove.call_count == 2
