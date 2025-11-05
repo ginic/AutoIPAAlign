@@ -1,27 +1,34 @@
 """Command-line interface for automatic IPA transcription and forced alignment."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import logging
 from pathlib import Path
 
 import tyro
-from transformers import pipeline
+import transformers
 
+import autoipaalign_cli.textgrid_io
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "ginic/full_dataset_train_3_wav2vec2-large-xlsr-53-buckeye-ipa"
+DEFAULT_TRANSCRIPTION_TIER_NAME = "ipa"
+DEFAULT_PHONE_ALIGN_TIER_NAME = "phone"
 
 
 @dataclass
-class HuggingFaceModel:
-    """Load a HuggingFace model for speech recognition"""
+class TranscriptionConfig:
+    model_name: str = field(default=DEFAULT_MODEL, kw_only=True)
+    device: int = field(default=-1, kw_only=True)
+    model_pipe: transformers.Pipeline = field(init=False)
 
-    model_name: str = DEFAULT_MODEL
-
-    def load(self):
-        return pipeline("automatic-speech-recognition", model=self.model_name)
+    def __post_init__(self):
+        logger.info("Loading model: %s", self.model_name)
+        return transformers.pipeline("automatic-speech-recognition", model=self.model_name, device=self.device)
 
 
 @dataclass
-class TranscribeSingle:
+class TranscribeSingle(TranscriptionConfig):
     """Transcribe a single audio file to IPA."""
 
     audio_path: Path
@@ -30,22 +37,19 @@ class TranscribeSingle:
     output_path: Path | None = None
     """Path to save the TextGrid file (default: audio_path with .TextGrid extension)"""
 
-    model_name: str = DEFAULT_MODEL
-    """HuggingFace model identifier for ASR"""
-
-    tier_name: str = "IPA"
+    tier_name: str = DEFAULT_TRANSCRIPTION_TIER_NAME
     """Name of the tier in the TextGrid"""
 
     def run(self):
         """Execute single file transcription."""
-        print(f"Transcribing {self.audio_path} with model {self.model_name}")
-        print(f"Output tier: {self.tier_name}")
-        # TODO: Implement transcription logic
+
+        logger.info("Transcribing %s with model %s", self.audio_path, self.model_name)
+        textgrid = textgrid_io.TextGridContainer.from_audio_and_tra
         print("TODO: Implement single file transcription")
 
 
 @dataclass
-class TranscribeBatch:
+class TranscribeBatch(TranscriptionConfig):
     """Transcribe multiple audio files to IPA."""
 
     audio_paths: list[Path]
@@ -54,10 +58,7 @@ class TranscribeBatch:
     output_dir: Path
     """Directory to save TextGrid files"""
 
-    model_name: str = DEFAULT_MODEL
-    """HuggingFace model identifier for ASR"""
-
-    tier_name: str = "IPA"
+    tier_name: str = DEFAULT_TRANSCRIPTION_TIER_NAME
     """Name of the tier in the TextGrid"""
 
     create_zip: bool = False
@@ -74,7 +75,7 @@ class TranscribeBatch:
 
 
 @dataclass
-class TranscribeIntervals:
+class TranscribeIntervals(TranscriptionConfig):
     """Transcribe intervals from an existing TextGrid."""
 
     audio_path: Path
@@ -86,11 +87,8 @@ class TranscribeIntervals:
     source_tier: str
     """Name of the source tier containing intervals to transcribe"""
 
-    target_tier: str = "IPATier"
+    target_tier: str = DEFAULT_TRANSCRIPTION_TIER_NAME
     """Name of the new tier to create with IPA transcriptions"""
-
-    model_name: str = DEFAULT_MODEL
-    """HuggingFace model identifier for ASR"""
 
     output_path: Path | None = None
     """Path to save the output TextGrid (default: audio_path with _IPA.TextGrid suffix)"""

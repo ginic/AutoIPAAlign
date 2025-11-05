@@ -8,10 +8,8 @@ transcriptions, and generating new tiers using automatic speech recognition (ASR
 from dataclasses import dataclass
 import os
 from pathlib import Path
-import tempfile
 
 import librosa
-import soundfile as sf
 import tgt.core
 import tgt.io3
 import transformers
@@ -75,6 +73,21 @@ class TextGridContainer:
         return cls(text_grid=tg)
 
     @classmethod
+    def from_audio_predict_transcription(
+        cls,
+        audio_in: str | os.PathLike[str],
+        textgrid_tier_name: str,
+        asr_pipeline: transformers.Pipeline,
+        sampling_rate: int = 16000,
+    ):
+        try:
+            y, sr = librosa.load(audio_in, sr=sampling_rate)
+            transcription = asr_pipeline({"array": y, "sampling_rate": sampling_rate})["text"]
+        except Exception as e:
+            transcription = f"[Error]: {e}"
+        return cls.from_audio_and_transcription(audio_in, textgrid_tier_name, transcription)
+
+    @classmethod
     def from_audio_and_transcription(
         cls, audio_in: str | os.PathLike[str], textgrid_tier_name: str, transcription: str
     ) -> "TextGridContainer":
@@ -112,6 +125,7 @@ class TextGridContainer:
         source_tier: str,
         target_tier: str,
         asr_pipeline: transformers.Pipeline,
+        sampling_rate: int = 16000,
     ) -> "TextGridContainer":
         """Create a TextGrid with ASR predictions for each interval in a source tier.
 
@@ -125,6 +139,7 @@ class TextGridContainer:
             source_tier: Name of the tier containing intervals to process.
             target_tier: Name for the new tier containing ASR predictions.
             asr_pipeline: Hugging Face transformers Pipeline for ASR.
+            sampling_rate: Sampling rate for the audio
 
         Returns:
             A new TextGridContainer with all original tiers plus the new target tier.
@@ -151,20 +166,12 @@ class TextGridContainer:
 
             start, end = interval.start_time, interval.end_time
             try:
-                y, sr = librosa.load(audio_in, sr=None, offset=start, duration=end - start)
-                temp_audio_path = None
-                try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-                        temp_audio_path = temp_audio.name
-                        sf.write(temp_audio_path, y, sr)
+                y, sr = librosa.load(audio_in, sr=sampling_rate, offset=start, duration=end - start)
+                prediction = asr_pipeline({"array": y, "sampling_rate": sampling_rate})["text"]
+                ipa_tier.add_annotation(tgt.core.Interval(start, end, prediction))
 
-                    prediction = asr_pipeline(temp_audio_path)["text"]
-                    ipa_tier.add_annotation(tgt.core.Interval(start, end, prediction))
-                finally:
-                    if temp_audio_path and os.path.exists(temp_audio_path):
-                        os.remove(temp_audio_path)
             except Exception as e:
-                ipa_tier.add_annotation(tgt.core.Interval(start, end, f"[Error]: {str(e)}"))
+                ipa_tier.add_annotation(tgt.core.Interval(start, end, f"[Error]: {e}"))
 
         tg.add_tier(ipa_tier)
 
