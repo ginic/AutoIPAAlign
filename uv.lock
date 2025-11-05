@@ -232,7 +232,7 @@ provides-extras = ["dev"]
 [[package]]
 name = "autoipaalign-compare"
 version = "0.1.0"
-source = { virtual = "packages/autoipaalign-compare" }
+source = { editable = "packages/autoipaalign-compare" }
 dependencies = [
     { name = "autoipaalign-cli" },
     { name = "tgt" },
@@ -260,7 +260,7 @@ provides-extras = ["whisper", "dev"]
 [[package]]
 name = "autoipaalign-web"
 version = "0.1.0"
-source = { virtual = "packages/autoipaalign-web" }
+source = { editable = "packages/autoipaalign-web" }
 dependencies = [
     { name = "autoipaalign-cli" },
     { name = "gradio", version = "4.44.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },

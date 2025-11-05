@@ -13,3 +13,7 @@ autoipaalign-cli = { workspace = true }
 
 # Note: ffmpeg is required as a system dependency for audio processing
 # Install via: apt-get install ffmpeg (Linux) or brew install ffmpeg (macOS)
+
+[build-system]
+requires = ["uv_build>=0.8.22,<0.10.0"]
+build-backend = "uv_build"

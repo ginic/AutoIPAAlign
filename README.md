@@ -45,7 +45,15 @@ This is a UV workspace containing multiple packages:
    ```bash
    git clone <repository-url>
    cd autoipaalign
-   uv sync
+   uv sync --all-packages
+   ```
+
+   To set up development and testing dependencies:
+   2. Clone the repository and install:
+   ```bash
+   git clone <repository-url>
+   cd autoipaalign
+   uv sync --all-packages --all-extras
    ```
 
 ### Installing Individual Packages
@@ -85,7 +93,7 @@ autoipaalign transcribe-intervals audio.wav existing.TextGrid --source-tier word
 
 ```bash
 cd packages/autoipaalign-web
-python -m autoipaalign_web.app
+uv run python -m autoipaalign_web.app
 ```
 
 Then open your browser to the URL shown in the terminal.
@@ -121,7 +129,3 @@ uv run ruff format .
 The default model is `ginic/full_dataset_train_3_wav2vec2-large-xlsr-53-buckeye-ipa`.
 
 See the full list of available models in the [models documentation](packages/autoipaalign-cli/src/autoipaalign_cli/cli.py).
-
-## Contributing
-
-[Add contribution guidelines]

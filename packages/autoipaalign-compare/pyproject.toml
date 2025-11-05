@@ -23,3 +23,7 @@ autoipaalign-cli = { workspace = true }
 # Note: Montreal Forced Aligner (MFA) is an optional external tool
 # Install via conda: conda install -c conda-forge montreal-forced-aligner
 # MFA is called as a CLI tool via subprocess, not as a Python dependency
+
+[build-system]
+requires = ["uv_build>=0.8.22,<0.10.0"]
+build-backend = "uv_build"
