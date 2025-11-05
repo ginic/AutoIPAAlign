@@ -14,7 +14,6 @@ import tgt.core
 import tgt.io3
 import transformers
 
-
 @dataclass
 class TextGridContainer:
     """Container for TextGrid objects with utilities for I/O and manipulation.
@@ -73,13 +72,13 @@ class TextGridContainer:
         return cls(text_grid=tg)
 
     @classmethod
-    def from_audio_predict_transcription(
+    def from_audio_with_predict_transcription(
         cls,
         audio_in: str | os.PathLike[str],
         textgrid_tier_name: str,
         asr_pipeline: transformers.Pipeline,
         sampling_rate: int = 16000,
-    ):
+    ) -> "TextGridContainer":
         try:
             y, sr = librosa.load(audio_in, sr=sampling_rate)
             transcription = asr_pipeline({"array": y, "sampling_rate": sampling_rate})["text"]
@@ -118,7 +117,7 @@ class TextGridContainer:
         return cls(text_grid=textgrid)
 
     @classmethod
-    def from_textgrid_with_predicted_intervals(
+    def from_textgrid_with_predict_intervals(
         cls,
         audio_in: str | os.PathLike[str],
         textgrid_path: Path,

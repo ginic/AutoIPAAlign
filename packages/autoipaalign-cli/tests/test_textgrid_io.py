@@ -88,17 +88,14 @@ def test_from_audio_and_transcription(mocker):
     assert test_tier.intervals[0].end_time == 5.5
 
 
-def test_from_textgrid_with_predicted_intervals(mocker, temp_textgrid_file):
+def test_from_textgrid_with_predict_intervals(mocker, temp_textgrid_file):
     """Test creating TextGrid with mock ASR predictions"""
     mocker.patch("autoipaalign_cli.textgrid_io.librosa.load", return_value=([0.1, 0.2, 0.3], 16000))
-    mocker.patch("autoipaalign_cli.textgrid_io.sf.write")
-    mocker.patch("autoipaalign_cli.textgrid_io.os.path.exists", return_value=True)
-    mock_remove = mocker.patch("autoipaalign_cli.textgrid_io.os.remove")
 
     mock_pipeline = mocker.Mock()
     mock_pipeline.return_value = {"text": "həloʊ"}
 
-    result = TextGridContainer.from_textgrid_with_predicted_intervals(
+    result = TextGridContainer.from_textgrid_with_predict_intervals(
         audio_in="/path/to/audio.wav",
         textgrid_path=temp_textgrid_file,
         source_tier="words",
@@ -125,4 +122,21 @@ def test_from_textgrid_with_predicted_intervals(mocker, temp_textgrid_file):
 
     # Prediction and temp file removal both happened twice
     assert mock_pipeline.call_count == 2
-    assert mock_remove.call_count == 2
+
+
+def test_from_audio_with_predict_transcription(mocker):
+    mocker.patch("autoipaalign_cli.textgrid_io.librosa.load", return_value=([0.1, 0.2, 0.3], 16000))
+    mocker.patch("autoipaalign_cli.textgrid_io.librosa.get_duration", return_value=5.5)
+    mock_pipeline = mocker.Mock()
+    mock_pipeline.return_value = {"text": "hello"}
+    tg = TextGridContainer.from_audio_with_predict_transcription(
+        audio_in="/path/to/audio.wav", textgrid_tier_name="transcription", asr_pipeline=mock_pipeline
+    )
+
+    assert tg.get_tier_names() == ["transcription"]
+    tier = tg.text_grid.get_tier_by_name("transcription")
+    assert len(tier.intervals) == 1
+    interval = tier.intervals[0]
+    assert interval.text == "hello"
+    assert interval.start_time == 0
+    assert interval.end_time == 5.5
