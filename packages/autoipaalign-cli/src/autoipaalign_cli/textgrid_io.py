@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 from typing import Any
 import warnings
+import zipfile
 
 import librosa
 import tgt.core
@@ -24,6 +25,38 @@ TEXT_GRID_SUFFIX = ".TextGrid"
 
 def to_textgrid_basename(filename: Path):
     return filename.with_suffix(TEXT_GRID_SUFFIX).name
+
+
+def write_textgrids_to_target(
+    audio_paths: list[Path], text_grids: list["TextGridContainer"], target_path: Path, is_zip: bool = False
+):
+    """Write multiple TextGrids to a directory or zip file. Existing zip file or TextGrid files will be overwritten.
+
+    Args:
+        audio_paths: List of paths to audio files corresponding to the TextGrids.
+            Used to generate TextGrid filenames.
+        text_grids: List of TextGridContainer objects to write contents of.
+        target_path: Destination path - either a directory or a zip file path.
+        is_zip: If True, write TextGrids to a zip file at target_path.
+            If False, write individual TextGrid files to the target_path directory.
+            Defaults to False.
+    """
+    if is_zip:
+        logger.info("Writing TextGrids to zip file %s", target_path)
+        with zipfile.ZipFile(target_path, "w") as zipf:
+            for i, (audio_path, tg) in enumerate(zip(audio_paths, text_grids), start=1):
+                zipf.writestr(to_textgrid_basename(audio_path), tg.export_to_long_textgrid_str())
+                if i % 10 == 0:
+                    logger.info("%s TextGrids written to zip", i)
+    else:
+        if not target_path.exists():
+            logger.info("Making output directory %s", target_path)
+            target_path.mkdir(parents=True)
+        logger.info("Writing TextGrids to %s", target_path)
+        for i, (audio_path, tg) in enumerate(zip(audio_paths, text_grids), start=1):
+            tg.write_textgrid(target_path, audio_path)
+            if i % 10 == 0:
+                logger.info("%s TextGrids written", i)
 
 
 @dataclass

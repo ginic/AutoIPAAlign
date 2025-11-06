@@ -8,7 +8,7 @@ import zipfile
 import tyro
 import transformers
 
-from autoipaalign_cli.textgrid_io import TextGridContainer, to_textgrid_basename
+from autoipaalign_cli.textgrid_io import TextGridContainer, to_textgrid_basename, write_textgrids_to_target
 
 logger = logging.getLogger(__name__)
 
@@ -48,42 +48,19 @@ class TranscriptionConfig:
 
 
 @dataclass
-class TranscribeSingle(TranscriptionConfig):
-    """Transcribe a single audio file to IPA."""
+class Transcribe(TranscriptionConfig):
+    """Transcribe multiple audio files using the desired HuggingFace model.
+    New TextGrid files are created and written to the specified
+    zip file or output directory.
 
-    audio_path: Path
-    """Path to the audio file to transcribe"""
-
-    output_dir: Path
-    """Directory to save the TextGrid file named like the audio file, but with a .TextGrid extension)"""
-
-    tier_name: str = DEFAULT_TRANSCRIPTION_TIER_NAME
-    """Name of the tier in the TextGrid"""
-
-    def transcribe(self) -> TextGridContainer:
-        logger.info("Transcribing %s with model %s", self.audio_path, self.asr_pipeline.model_name)
-
-        tg = TextGridContainer.from_audio_with_predict_transcription(
-            self.audio_path, self.tier_name, self.asr_pipeline._model_pipe, self.sampling_rate
-        )
-        return tg
-
-    def run(self):
-        """Transcribe a single audio and save the result as a TextGrid file"""
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        tg = self.transcribe()
-        return tg.write_textgrid(self.output_dir, self.audio_path)
-
-
-@dataclass
-class TranscribeBatch(TranscriptionConfig):
-    """Transcribe multiple audio files to IPA."""
+    Output TextGrids have the filename as the corresponding audio files with a .TextGrid suffix.
+    """
 
     audio_paths: list[Path]
     """Paths to audio files to transcribe"""
 
     output_target: Path
-    """Name of directory or zip file to save TextGrid files to"""
+    """Name of directory or zip file to save TextGrid files to."""
 
     tier_name: str = DEFAULT_TRANSCRIPTION_TIER_NAME
     """Name of the tier in the TextGrid"""
@@ -101,28 +78,16 @@ class TranscribeBatch(TranscriptionConfig):
             tg = TextGridContainer.from_audio_and_transcription(audio_path, self.tier_name, transcription["text"])
             text_grids.append(tg)
 
-        if self.zipped:
-            logger.info("Writing TextGrids to zip file %s", self.output_target)
-            with zipfile.ZipFile(self.output_target, "w") as zipf:
-                for i, (audio_path, tg) in enumerate(zip(self.audio_paths, text_grids), start=1):
-                    zipf.writestr(to_textgrid_basename(audio_path), tg.export_to_long_textgrid_str())
-                    if i % 10 == 0:
-                        logger.info("%s TextGrids written to zip", i)
-
-        else:
-            if not self.output_target.exists():
-                logger.info("Making output directory %s", self.output_target)
-                self.output_target.mkdir(parents=True)
-            logger.info("Writing TextGrids to %s", self.output_target)
-            for i, (audio_path, tg) in enumerate(zip(self.audio_paths, text_grids), start=1):
-                tg.write_textgrid(self.output_target, audio_path)
-                if i % 10 == 0:
-                    logger.info("%s TextGrids written", i)
-
+        write_textgrids_to_target(self.audio_paths, text_grids, self.output_target, self.zipped)
 
 @dataclass
 class TranscribeIntervals(TranscriptionConfig):
-    """Transcribe intervals from an existing TextGrid."""
+    """Transcribe intervals from an existing TextGrid file using the desired HuggingFace model.
+    Interval time frames are taken from the source tier, transcribed, and
+    transcriptions are added as intervals in a new target tier.
+
+    Output TextGrids have the filename as the corresponding audio files with a .TextGrid suffix.
+    """
 
     audio_path: Path
     """Path to the audio file"""
@@ -130,14 +95,17 @@ class TranscribeIntervals(TranscriptionConfig):
     textgrid_path: Path
     """Path to the existing TextGrid file"""
 
+    output_target: Path
+    """Name of directory to save TextGrid files to."""
+
     source_tier: str
     """Name of the source tier containing intervals to transcribe"""
 
     target_tier: str = DEFAULT_TRANSCRIPTION_TIER_NAME
     """Name of the new tier to create with IPA transcriptions"""
 
-    output_path: Path | None = None
-    """Path to save the output TextGrid (default: audio_path with _IPA.TextGrid suffix)"""
+    overwrite: bool = False
+    """Use this flag to allow overwriting existing TextGrid files with the same filename"""
 
     def run(self):
         """Execute interval-based transcription."""
@@ -149,21 +117,9 @@ class TranscribeIntervals(TranscriptionConfig):
         print("TODO: Implement interval transcription")
 
 
-@dataclass
-class CLI:
-    """Automatic IPA transcription and forced alignment CLI."""
-
-    command: TranscribeSingle | TranscribeBatch | TranscribeIntervals
-    """The command to execute"""
-
-    def run(self):
-        """Execute the selected command."""
-        self.command.run()
-
-
 def main():
     """Main entry point for the CLI."""
-    cli = tyro.cli(CLI)
+    cli = tyro.cli(Transcribe | TranscribeIntervals)
     cli.run()
 
 
