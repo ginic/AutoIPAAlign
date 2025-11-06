@@ -227,7 +227,7 @@ class TextGridContainer:
         if textgrid_path is None:
             raise TypeError("Missing TextGrid input file")
 
-        source_tg = tgt.io3.read_textgrid(textgrid_path)
+        source_tg = tgt.io3.read_textgrid(textgrid_path, include_empty_intervals=True)
         tier = source_tg.get_tier_by_name(source_tier)
         ipa_tier = tgt.core.IntervalTier(name=target_tier)
 

@@ -14,14 +14,15 @@ def mock_asr_pipeline(mocker):
     mock_pipeline = mocker.Mock(spec=ASRPipeline)
     mock_pipeline.model_name = "test-model"
     mock_pipeline._model_pipe = mocker.Mock()
-    mock_pipeline._model_pipe.return_value = [{"text": "test transcription"}]
     return mock_pipeline
 
 
 def test_transcribe_run_directory(mock_asr_pipeline, tmp_path, shared_datadir):
     """Test Transcribe.run() writing to directory"""
-    audio_path = shared_datadir / "test1.wav"
+    # Full file transcription does all files at once
+    mock_asr_pipeline._model_pipe.return_value = [{"text": "test transcription"}]
 
+    audio_path = shared_datadir / "test1.wav"
     transcribe = Transcribe(
         asr_pipeline=mock_asr_pipeline,
         audio_paths=[audio_path],
@@ -49,6 +50,8 @@ def test_transcribe_run_directory(mock_asr_pipeline, tmp_path, shared_datadir):
 
 def test_transcribe_run_zip(mock_asr_pipeline, tmp_path, shared_datadir):
     """Test Transcribe.run() writing to zip file"""
+    # Full file transcription does all files at once
+    mock_asr_pipeline._model_pipe.return_value = [{"text": "test transcription"}]
     audio_path = shared_datadir / "test1.wav"
     transcribe = Transcribe(
         asr_pipeline=mock_asr_pipeline,
@@ -81,6 +84,8 @@ def test_transcribe_run_zip(mock_asr_pipeline, tmp_path, shared_datadir):
 
 def test_transcribe_intervals_run(mock_asr_pipeline, tmp_path, shared_datadir):
     """Test TranscribeIntervals.run()"""
+    # Intervals predict one at a time
+    mock_asr_pipeline._model_pipe.return_value = {"text": "test transcription"}
 
     audio_path = shared_datadir / "test1.wav"
     textgrid_path = shared_datadir / "test1.TextGrid"
@@ -117,7 +122,8 @@ def test_transcribe_intervals_run(mock_asr_pipeline, tmp_path, shared_datadir):
 def test_transcribe_intervals_run_error_handling(mock_asr_pipeline, tmp_path, mocker, shared_datadir):
     """Test TranscribeIntervals.run() handles ASR errors gracefully"""
     mocker.patch("autoipaalign_cli.textgrid_io.librosa.load", side_effect=Exception("Load error"))
-
+    # Intervals predict one at a time
+    mock_asr_pipeline._model_pipe.return_value = {"text": "test transcription"}
     audio_path = shared_datadir / "test1.wav"
     textgrid_path = shared_datadir / "test1.TextGrid"
 

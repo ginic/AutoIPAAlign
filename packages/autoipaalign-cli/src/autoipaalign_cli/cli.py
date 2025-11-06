@@ -22,7 +22,7 @@ class ASRPipeline:
     model_name: str = field(default=DEFAULT_MODEL)
     """The name of the HuggingFace model used to transcribe speech. """
 
-    device: int = field(default=-1)
+    device: int | str = field(default=-1)
     """Index of the device for model inference. Defaults to -1 for CPU.
     """
 
