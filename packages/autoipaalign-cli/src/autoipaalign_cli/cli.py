@@ -3,12 +3,10 @@
 from dataclasses import dataclass, field
 import logging
 from pathlib import Path
-import zipfile
-
 import tyro
 import transformers
 
-from autoipaalign_cli.textgrid_io import TextGridContainer, to_textgrid_basename, write_textgrids_to_target
+from autoipaalign_cli.textgrid_io import TextGridContainer, write_textgrids_to_target
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +44,9 @@ class TranscriptionConfig:
     sampling_rate: int = field(default=16000, kw_only=True)
     """Sampling rate for audio preprocessing. Defaults to 16K."""
 
+    overwrite: bool = field(default=False, kw_only=True)
+    """Use this flag to allow overwriting existing TextGrid files."""
+
 
 @dataclass
 class Transcribe(TranscriptionConfig):
@@ -70,7 +71,14 @@ class Transcribe(TranscriptionConfig):
 
     def run(self):
         """Transcribe and write files."""
-        logger.info(f"Transcribing {len(self.audio_paths)} files with model {self.asr_pipeline.model_name}")
+        if self.output_target.exists():
+            if self.overwrite:
+                logger.warning("Target %s already exists and may be overwritten.")
+            else:
+                logger.warning("Target %s already exists, but cannot be overwritten. Transcriptions may not be saved.")
+
+        logger.info("Transcribing  %s files with model %s.", len(self.audio_paths), self.asr_pipeline.model_name)
+
         transcriptions = self.asr_pipeline._model_pipe(self.audio_paths)
         text_grids = []
 
@@ -78,7 +86,8 @@ class Transcribe(TranscriptionConfig):
             tg = TextGridContainer.from_audio_and_transcription(audio_path, self.tier_name, transcription["text"])
             text_grids.append(tg)
 
-        write_textgrids_to_target(self.audio_paths, text_grids, self.output_target, self.zipped)
+        write_textgrids_to_target(self.audio_paths, text_grids, self.output_target, self.zipped, self.overwrite)
+
 
 @dataclass
 class TranscribeIntervals(TranscriptionConfig):
@@ -104,23 +113,28 @@ class TranscribeIntervals(TranscriptionConfig):
     target_tier: str = DEFAULT_TRANSCRIPTION_TIER_NAME
     """Name of the new tier to create with IPA transcriptions"""
 
-    overwrite: bool = False
-    """Use this flag to allow overwriting existing TextGrid files with the same filename"""
-
     def run(self):
         """Execute interval-based transcription."""
-        print(f"Transcribing intervals from {self.textgrid_path}")
-        print(f"Audio: {self.audio_path}")
-        print(f"Source tier: {self.source_tier} -> Target tier: {self.target_tier}")
-        print(f"Model: {self.model_name}")
-        # TODO: Implement interval transcription logic
-        print("TODO: Implement interval transcription")
+        logger.info("Transcribing intervals from %s.", self.textgrid_path)
+        tg = TextGridContainer.from_textgrid_with_predict_intervals(
+            self.audio_path,
+            self.textgrid_path,
+            self.source_tier,
+            self.target_tier,
+            self.asr_pipeline._model_pipe,
+            self.sampling_rate,
+        )
+        tg.write_textgrid(self.output_target, self.audio_path, self.overwrite)
 
 
 def main():
     """Main entry point for the CLI."""
     cli = tyro.cli(Transcribe | TranscribeIntervals)
-    cli.run()
+    try:
+        cli.run()
+    except Exception as e:
+        logger.error(e)
+        raise e
 
 
 if __name__ == "__main__":

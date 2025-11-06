@@ -28,7 +28,11 @@ def to_textgrid_basename(filename: Path):
 
 
 def write_textgrids_to_target(
-    audio_paths: list[Path], text_grids: list["TextGridContainer"], target_path: Path, is_zip: bool = False
+    audio_paths: list[Path],
+    text_grids: list["TextGridContainer"],
+    target_path: Path,
+    is_zip: bool = False,
+    is_overwrite: bool = True,
 ):
     """Write multiple TextGrids to a directory or zip file. Existing zip file or TextGrid files will be overwritten.
 
@@ -40,9 +44,13 @@ def write_textgrids_to_target(
         is_zip: If True, write TextGrids to a zip file at target_path.
             If False, write individual TextGrid files to the target_path directory.
             Defaults to False.
+        is_overwrite: Boolean flag, allow overwriting existing files or not.
     """
     if is_zip:
         logger.info("Writing TextGrids to zip file %s", target_path)
+        if target_path.exists() and not is_overwrite:
+            raise OSError(f"{target_path} already exists and cannot be overwritten")
+
         with zipfile.ZipFile(target_path, "w") as zipf:
             for i, (audio_path, tg) in enumerate(zip(audio_paths, text_grids), start=1):
                 zipf.writestr(to_textgrid_basename(audio_path), tg.export_to_long_textgrid_str())
@@ -54,7 +62,7 @@ def write_textgrids_to_target(
             target_path.mkdir(parents=True)
         logger.info("Writing TextGrids to %s", target_path)
         for i, (audio_path, tg) in enumerate(zip(audio_paths, text_grids), start=1):
-            tg.write_textgrid(target_path, audio_path)
+            tg.write_textgrid(target_path, audio_path, is_overwrite)
             if i % 10 == 0:
                 logger.info("%s TextGrids written", i)
 
@@ -89,17 +97,23 @@ class TextGridContainer:
         """
         return self.text_grid.get_tier_names()
 
-    def write_textgrid(self, directory: Path, filename: Path) -> Path:
-        """Write the TextGrid to a file in the specified directory.
+    def write_textgrid(self, directory: Path, filename: Path, is_overwrite: bool = True) -> Path:
+        """Write the TextGrid to a file in the specified directory using hte same
 
         Args:
             directory: The directory where the TextGrid file will be written.
-            filename: Path to corresponding audio file.
+            filename: Path or filename with to use as the basename for the output.
+                Usually the path to the corresponding audio file.
+            is_overwrite: Boolean flag, allow overwriting existing files or not.
 
         Returns:
             The full path to the written TextGrid file.
         """
         textgrid_path = Path(directory) / to_textgrid_basename(filename)
+
+        if is_overwrite and textgrid_path.exists():
+            raise OSError("File %s already exists and cannot be overwritten", textgrid_path)
+
         logger.debug("Writing TextGrid to %s", textgrid_path)
         textgrid_path.write_text(self.export_to_long_textgrid_str())
         logger.debug("TextGrid %s written", textgrid_path)
@@ -112,10 +126,9 @@ class TextGridContainer:
             raise ValueError("TextGrid ends at {tg_end_time:.2f}s but audio is only {audio_duration:.2f}s.")
 
         if abs(tg_end_time - audio_duration) > time_difference:
-            warnings.warn(
-                f"TextGrid ends at {tg_end_time:.2f}s but audio is {audio_duration:.2f}s. "
-                "Only the annotated portion will be transcribed."
-            )
+            warning = f"TextGrid ends at {tg_end_time:.2f}s but audio is {audio_duration:.2f}s. Only the annotated portion will be transcribed."
+            warnings.warn(warning)  # So this appears in gradio
+            logger.warning(warning)
 
     @classmethod
     def from_textgrid_file(cls, textgrid_file: Path) -> "TextGridContainer":
@@ -212,10 +225,10 @@ class TextGridContainer:
         if audio_in is None:
             raise TypeError("Missing audio file")
         if textgrid_path is None:
-            raise TypeError("Missing TextGrid input file.")
+            raise TypeError("Missing TextGrid input file")
 
-        tg = tgt.io3.read_textgrid(textgrid_path)
-        tier = tg.get_tier_by_name(source_tier)
+        source_tg = tgt.io3.read_textgrid(textgrid_path)
+        tier = source_tg.get_tier_by_name(source_tier)
         ipa_tier = tgt.core.IntervalTier(name=target_tier)
 
         for interval in tier.intervals:
@@ -231,6 +244,6 @@ class TextGridContainer:
             except Exception as e:
                 ipa_tier.add_annotation(tgt.core.Interval(start, end, f"[Error]: {e}"))
 
-        tg.add_tier(ipa_tier)
+        source_tg.add_tier(ipa_tier)
 
-        return cls(text_grid=tg)
+        return cls(text_grid=source_tg)
