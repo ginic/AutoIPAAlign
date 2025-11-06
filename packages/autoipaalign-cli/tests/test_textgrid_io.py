@@ -1,12 +1,13 @@
 """Unit tests for textgrid_io module"""
 
 from pathlib import Path
+import zipfile
 
 import pytest
 import tgt.core
 import tgt.io3
 
-from autoipaalign_cli.textgrid_io import TextGridContainer
+from autoipaalign_cli.textgrid_io import TextGridContainer, write_textgrids_to_target
 
 
 @pytest.fixture
@@ -140,3 +141,45 @@ def test_from_audio_with_predict_transcription(mocker):
     assert interval.text == "hello"
     assert interval.start_time == 0
     assert interval.end_time == 5.5
+
+
+def test_write_textgrids_to_directory(sample_textgrid, tmp_path):
+    """Test writing TextGrids to directory"""
+    audio_paths = [Path("test1.wav"), Path("test2.wav")]
+    text_grids = [TextGridContainer(sample_textgrid), TextGridContainer(sample_textgrid)]
+    target = tmp_path / "output"
+
+    write_textgrids_to_target(audio_paths, text_grids, target, is_zip=False)
+
+    assert target.is_dir()
+    assert (target / "test1.TextGrid").exists()
+    assert (target / "test2.TextGrid").exists()
+
+
+def test_write_textgrids_to_zip(sample_textgrid, tmp_path):
+    """Test writing TextGrids to zip file"""
+    audio_paths = [Path("test1.wav"), Path("test2.wav")]
+    text_grids = [TextGridContainer(sample_textgrid), TextGridContainer(sample_textgrid)]
+    target = tmp_path / "output.zip"
+
+    write_textgrids_to_target(audio_paths, text_grids, target, is_zip=True)
+
+    assert target.exists()
+    with zipfile.ZipFile(target, "r") as zipf:
+        names = zipf.namelist()
+        assert "test1.TextGrid" in names
+        assert "test2.TextGrid" in names
+
+
+def test_write_textgrids_to_target_no_overwrite(sample_textgrid, tmp_path):
+    """Test that write_textgrids_to_target raises error when is_overwrite=False and file exists"""
+    audio_paths = [Path("test.wav")]
+    text_grids = [TextGridContainer(sample_textgrid)]
+    target = tmp_path / "output.zip"
+
+    # Write first time
+    write_textgrids_to_target(audio_paths, text_grids, target, is_zip=True)
+
+    # Should raise error on second write with is_overwrite=False
+    with pytest.raises(OSError, match="already exists"):
+        write_textgrids_to_target(audio_paths, text_grids, target, is_zip=True, is_overwrite=False)

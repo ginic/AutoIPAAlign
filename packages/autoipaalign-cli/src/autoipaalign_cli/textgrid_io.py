@@ -232,9 +232,6 @@ class TextGridContainer:
         ipa_tier = tgt.core.IntervalTier(name=target_tier)
 
         for interval in tier.intervals:
-            if not interval.text.strip():  # Skip empty text intervals
-                continue
-
             start, end = interval.start_time, interval.end_time
             try:
                 y, sr = librosa.load(audio_in, sr=sampling_rate, offset=start, duration=end - start)

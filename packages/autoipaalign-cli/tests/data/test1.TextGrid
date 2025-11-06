@@ -1,58 +1,58 @@
 File type = "ooTextFile"
 Object class = "TextGrid"
 
-xmin = 0 
-xmax = 2.2798125 
-tiers? <exists> 
-size = 1 
-item []: 
+xmin = 0
+xmax = 2.2798125
+tiers? <exists>
+size = 1
+item []:
     item [1]:
-        class = "IntervalTier" 
-        name = "Transcription" 
-        xmin = 0 
-        xmax = 2.2798125 
-        intervals: size = 11 
+        class = "IntervalTier"
+        name = "words"
+        xmin = 0
+        xmax = 2.273
+        intervals: size = 11
         intervals [1]:
-            xmin = 0 
-            xmax = 0.026673287061930673 
-            text = "" 
+            xmin = 0
+            xmax = 0.026673287061930673
+            text = ""
         intervals [2]:
-            xmin = 0.026673287061930673 
-            xmax = 0.3589363451654225 
-            text = "not" 
+            xmin = 0.026673287061930673
+            xmax = 0.3589363451654225
+            text = "not"
         intervals [3]:
-            xmin = 0.3589363451654225 
-            xmax = 1.1213207593069965 
-            text = "" 
+            xmin = 0.3589363451654225
+            xmax = 1.1213207593069965
+            text = ""
         intervals [4]:
-            xmin = 1.1213207593069965 
-            xmax = 1.2123517341298709 
-            text = "it" 
+            xmin = 1.1213207593069965
+            xmax = 1.2123517341298709
+            text = "it"
         intervals [5]:
-            xmin = 1.2123517341298709 
-            xmax = 1.2260063803533021 
-            text = "" 
+            xmin = 1.2123517341298709
+            xmax = 1.2260063803533021
+            text = ""
         intervals [6]:
-            xmin = 1.2260063803533021 
-            xmax = 1.4558595917810602 
-            text = "was" 
+            xmin = 1.2260063803533021
+            xmax = 1.4558595917810602
+            text = "was"
         intervals [7]:
-            xmin = 1.4558595917810602 
-            xmax = 1.4626869148927757 
-            text = "" 
+            xmin = 1.4558595917810602
+            xmax = 1.4626869148927757
+            text = ""
         intervals [8]:
-            xmin = 1.4626869148927757 
-            xmax = 1.719849418767396 
-            text = "better" 
+            xmin = 1.4626869148927757
+            xmax = 1.719849418767396
+            text = "better"
         intervals [9]:
-            xmin = 1.719849418767396 
-            xmax = 1.7335040649908273 
-            text = "" 
+            xmin = 1.719849418767396
+            xmax = 1.7335040649908273
+            text = ""
         intervals [10]:
-            xmin = 1.7335040649908273 
-            xmax = 2.268311042075215 
-            text = "before" 
+            xmin = 1.7335040649908273
+            xmax = 2.268311042075215
+            text = "before"
         intervals [11]:
-            xmin = 2.268311042075215 
-            xmax = 2.2798125 
-            text = "" 
+            xmin = 2.268311042075215
+            xmax = 2.273
+            text = ""
