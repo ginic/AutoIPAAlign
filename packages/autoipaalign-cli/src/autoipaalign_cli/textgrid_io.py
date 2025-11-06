@@ -6,13 +6,25 @@ transcriptions, and generating new tiers using automatic speech recognition (ASR
 """
 
 from dataclasses import dataclass
+import logging
 import os
 from pathlib import Path
+from typing import Any
+import warnings
 
 import librosa
 import tgt.core
 import tgt.io3
 import transformers
+
+logger = logging.getLogger(__name__)
+
+TEXT_GRID_SUFFIX = ".TextGrid"
+
+
+def to_textgrid_basename(filename: Path):
+    return filename.with_suffix(TEXT_GRID_SUFFIX).name
+
 
 @dataclass
 class TextGridContainer:
@@ -49,14 +61,28 @@ class TextGridContainer:
 
         Args:
             directory: The directory where the TextGrid file will be written.
-            filename: The desired filename (only the name portion will be used).
+            filename: Path to corresponding audio file.
 
         Returns:
             The full path to the written TextGrid file.
         """
-        textgrid_path = Path(directory) / Path(filename).name
+        textgrid_path = Path(directory) / to_textgrid_basename(filename)
+        logger.debug("Writing TextGrid to %s", textgrid_path)
         textgrid_path.write_text(self.export_to_long_textgrid_str())
+        logger.debug("TextGrid %s written", textgrid_path)
         return textgrid_path
+
+    def validate_against_audio_duration(self, audio_path: str | os.PathLike[str], time_difference=0.01):
+        audio_duration = librosa.get_duration(path=audio_path, sr=None)
+        tg_end_time = max(tier.end_time for tier in self.text_grid.tiers)
+        if tg_end_time > audio_duration:
+            raise ValueError("TextGrid ends at {tg_end_time:.2f}s but audio is only {audio_duration:.2f}s.")
+
+        if abs(tg_end_time - audio_duration) > time_difference:
+            warnings.warn(
+                f"TextGrid ends at {tg_end_time:.2f}s but audio is {audio_duration:.2f}s. "
+                "Only the annotated portion will be transcribed."
+            )
 
     @classmethod
     def from_textgrid_file(cls, textgrid_file: Path) -> "TextGridContainer":
@@ -107,7 +133,7 @@ class TextGridContainer:
         if audio_in is None or transcription is None:
             return cls(text_grid=tgt.core.TextGrid())
 
-        duration = librosa.get_duration(path=audio_in)
+        duration = librosa.get_duration(path=audio_in, sr=None)
 
         annotation = tgt.core.Interval(0, duration, transcription)
         transcription_tier = tgt.core.IntervalTier(start_time=0, end_time=duration, name=textgrid_tier_name)
