@@ -5,7 +5,8 @@ import zipfile
 import pytest
 import tgt.io3
 
-from autoipaalign_cli.cli import ASRPipeline, Transcribe, TranscribeIntervals
+from autoipaalign_cli.cli import Transcribe, TranscribeIntervals
+from autoipaalign_cli.speech_recognition import ASRPipeline
 
 
 @pytest.fixture
@@ -14,7 +15,7 @@ def mock_asr_pipeline(mocker):
     mock_pipeline = mocker.Mock(spec=ASRPipeline)
     mock_pipeline.model_name = "test-model"
     mock_pipeline._model_pipe = mocker.Mock()
-    mock_pipeline._model_pipe.return_value = {"text": "test transcription"}
+    mock_pipeline.predict.return_value = "test transcription"
     return mock_pipeline
 
 
@@ -35,7 +36,7 @@ def test_transcribe_run_directory(mock_asr_pipeline, tmp_path, shared_datadir):
 
     assert (tmp_path / "output").is_dir()
     assert (tmp_path / "output" / "test1.TextGrid").exists()
-    mock_asr_pipeline._model_pipe.assert_called_once()
+    mock_asr_pipeline.predict.assert_called_once()
 
     # Check internal contents
     tg = tgt.io3.read_textgrid(tmp_path / "output" / "test1.TextGrid")
@@ -102,7 +103,7 @@ def test_transcribe_intervals_run(mock_asr_pipeline, tmp_path, shared_datadir):
     output_path = tmp_path / "test1.TextGrid"
     assert output_path.exists()
 
-    assert mock_asr_pipeline._model_pipe.call_count == 11
+    assert mock_asr_pipeline.predict.call_count == 11
 
     # Check internal contents
     tg = tgt.io3.read_textgrid(output_path)
@@ -119,9 +120,8 @@ def test_transcribe_intervals_run(mock_asr_pipeline, tmp_path, shared_datadir):
 
 def test_transcribe_intervals_run_error_handling(mock_asr_pipeline, tmp_path, mocker, shared_datadir):
     """Test TranscribeIntervals.run() handles ASR errors gracefully"""
-    mocker.patch("autoipaalign_cli.textgrid_io.librosa.load", side_effect=Exception("Load error"))
-    # Intervals predict one at a time
-    mock_asr_pipeline._model_pipe.return_value = {"text": "test transcription"}
+    # Make predict() raise an exception for all calls
+    mock_asr_pipeline.predict.side_effect = Exception("Load error")
     audio_path = shared_datadir / "test1.wav"
     textgrid_path = shared_datadir / "test1.TextGrid"
 

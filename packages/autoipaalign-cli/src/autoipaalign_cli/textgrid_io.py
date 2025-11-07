@@ -15,7 +15,8 @@ import zipfile
 import librosa
 import tgt.core
 import tgt.io3
-import transformers
+
+from autoipaalign_cli.speech_recognition import ASRPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -147,12 +148,10 @@ class TextGridContainer:
         cls,
         audio_in: str | os.PathLike[str],
         textgrid_tier_name: str,
-        asr_pipeline: transformers.Pipeline,
-        sampling_rate: int = 16000,
+        asr_pipeline: ASRPipeline,
     ) -> "TextGridContainer":
         try:
-            y, sr = librosa.load(audio_in, sr=sampling_rate)
-            transcription = asr_pipeline(y)["text"]
+            transcription = asr_pipeline.predict(audio_in)
         except Exception as e:
             transcription = f"[Error]: {e}"
         return cls.from_audio_and_transcription(audio_in, textgrid_tier_name, transcription)
@@ -194,8 +193,7 @@ class TextGridContainer:
         textgrid_path: Path,
         source_tier: str,
         target_tier: str,
-        asr_pipeline: transformers.Pipeline,
-        sampling_rate: int = 16000,
+        asr_pipeline: ASRPipeline,
     ) -> "TextGridContainer":
         """Create a TextGrid with ASR predictions for each interval in a source tier.
 
@@ -208,8 +206,7 @@ class TextGridContainer:
             textgrid_path: Path to the existing TextGrid file.
             source_tier: Name of the tier containing intervals to process.
             target_tier: Name for the new tier containing ASR predictions.
-            asr_pipeline: Hugging Face transformers Pipeline for ASR.
-            sampling_rate: Sampling rate for the audio
+            asr_pipeline: ASRPipeline for predicting transcriptions
 
         Returns:
             A new TextGridContainer with all original tiers plus the new target tier.
@@ -233,8 +230,7 @@ class TextGridContainer:
         for interval in tier.intervals:
             start, end = interval.start_time, interval.end_time
             try:
-                y, sr = librosa.load(audio_in, sr=sampling_rate, offset=start, duration=end - start)
-                prediction = asr_pipeline(y)["text"]
+                prediction = asr_pipeline.predict(audio_in, (start, end))
                 ipa_tier.add_annotation(tgt.core.Interval(start, end, prediction))
 
             except Exception as e:

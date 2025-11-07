@@ -94,7 +94,7 @@ def test_from_textgrid_with_predict_intervals(mocker, temp_textgrid_file):
     mocker.patch("autoipaalign_cli.textgrid_io.librosa.load", return_value=([0.1, 0.2, 0.3], 16000))
 
     mock_pipeline = mocker.Mock()
-    mock_pipeline.return_value = {"text": "həloʊ"}
+    mock_pipeline.predict.return_value = "həloʊ"
 
     result = TextGridContainer.from_textgrid_with_predict_intervals(
         audio_in="/path/to/audio.wav",
@@ -121,15 +121,15 @@ def test_from_textgrid_with_predict_intervals(mocker, temp_textgrid_file):
     assert interval2.start_time == 2.5
     assert interval2.end_time == 5.0
 
-    # Prediction and temp file removal both happened twice
-    assert mock_pipeline.call_count == 2
+    # Prediction happened twice (once per interval)
+    assert mock_pipeline.predict.call_count == 2
 
 
 def test_from_audio_with_predict_transcription(mocker):
     mocker.patch("autoipaalign_cli.textgrid_io.librosa.load", return_value=([0.1, 0.2, 0.3], 16000))
     mocker.patch("autoipaalign_cli.textgrid_io.librosa.get_duration", return_value=5.5)
     mock_pipeline = mocker.Mock()
-    mock_pipeline.return_value = {"text": "hello"}
+    mock_pipeline.predict.return_value = "hello"
     tg = TextGridContainer.from_audio_with_predict_transcription(
         audio_in="/path/to/audio.wav", textgrid_tier_name="transcription", asr_pipeline=mock_pipeline
     )

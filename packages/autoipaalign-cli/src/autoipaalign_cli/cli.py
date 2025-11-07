@@ -4,34 +4,16 @@ from dataclasses import dataclass, field
 import logging
 from pathlib import Path
 import tyro
-import transformers
 
 from autoipaalign_cli.textgrid_io import TextGridContainer, write_textgrids_to_target
+from autoipaalign_cli.speech_recognition import ASRPipeline
+
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "ginic/full_dataset_train_3_wav2vec2-large-xlsr-53-buckeye-ipa"
+
 DEFAULT_TRANSCRIPTION_TIER_NAME = "ipa"
 DEFAULT_PHONE_ALIGN_TIER_NAME = "phone"
-
-
-@dataclass
-class ASRPipeline:
-    """Handles loading and configuration of the Transformer pipeline"""
-
-    model_name: str = field(default=DEFAULT_MODEL)
-    """The name of the HuggingFace model used to transcribe speech."""
-
-    device: int | str = field(default=-1)
-    """Index of the device for model inference. Defaults to -1 for CPU."""
-
-    _model_pipe: transformers.Pipeline = field(init=False)
-
-    def __post_init__(self):
-        logger.info("Loading model: %s", self.model_name)
-        self._model_pipe = transformers.pipeline(
-            "automatic-speech-recognition", model=self.model_name, device=self.device
-        )
 
 
 @dataclass
@@ -40,8 +22,7 @@ class IOConfig:
     during the transcription process.
     """
 
-    sampling_rate: int = field(default=16000, kw_only=True)
-    """Sampling rate for audio preprocessing. Defaults to 16K."""
+    # TODO Configure codec options here in the future
 
     overwrite: bool = field(default=False, kw_only=True)
     """Use this flag to allow overwriting existing output files."""
@@ -87,9 +68,7 @@ class Transcribe:
         text_grids = []
 
         for audio_path in self.audio_paths:
-            tg = TextGridContainer.from_audio_with_predict_transcription(
-                audio_path, self.tier_name, self.asr._model_pipe, self.io.sampling_rate
-            )
+            tg = TextGridContainer.from_audio_with_predict_transcription(audio_path, self.tier_name, self.asr)
             text_grids.append(tg)
 
         write_textgrids_to_target(self.audio_paths, text_grids, self.output_target, self.zipped, self.io.overwrite)
@@ -129,12 +108,7 @@ class TranscribeIntervals:
         """Execute interval-based transcription."""
         logger.info("Transcribing intervals from %s.", self.textgrid_path)
         tg = TextGridContainer.from_textgrid_with_predict_intervals(
-            self.audio_path,
-            self.textgrid_path,
-            self.source_tier,
-            self.target_tier,
-            self.asr._model_pipe,
-            self.io.sampling_rate,
+            self.audio_path, self.textgrid_path, self.source_tier, self.target_tier, self.asr
         )
         tg.write_textgrid(self.output_target, self.audio_path, self.io.overwrite)
 
