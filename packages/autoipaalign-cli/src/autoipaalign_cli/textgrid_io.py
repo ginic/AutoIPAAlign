@@ -111,8 +111,8 @@ class TextGridContainer:
         """
         textgrid_path = Path(directory) / to_textgrid_basename(filename)
 
-        if is_overwrite and textgrid_path.exists():
-            raise OSError("File %s already exists and cannot be overwritten", textgrid_path)
+        if not is_overwrite and textgrid_path.exists():
+            raise OSError(f"File {textgrid_path} already exists and cannot be overwritten")
 
         logger.debug("Writing TextGrid to %s", textgrid_path)
         textgrid_path.write_text(self.export_to_long_textgrid_str())

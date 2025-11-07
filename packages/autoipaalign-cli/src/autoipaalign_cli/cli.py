@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 import logging
 from pathlib import Path
+
 import tyro
 
 from autoipaalign_cli.textgrid_io import TextGridContainer, write_textgrids_to_target
@@ -24,8 +25,8 @@ class IOConfig:
 
     # TODO Configure codec options here in the future
 
-    overwrite: bool = field(default=False, kw_only=True)
-    """Use this flag to allow overwriting existing output files."""
+    overwrite: bool = False
+    """Use overwrite flag to allow overwriting existing output files. Defaults to not overwriting."""
 
 
 @dataclass
@@ -34,34 +35,37 @@ class Transcribe:
     New TextGrid files are created and written to the specified
     zip file or output directory.
 
-    Output TextGrids have the filename as the corresponding audio files with a .TextGrid suffix.
+    Output TextGrids have the same file basename as the corresponding audio files with a .TextGrid suffix.
     """
 
     audio_paths: list[Path]
-    """Paths to audio files to transcribe"""
+    """Paths to audio files to transcribe."""
 
     output_target: Path
     """Name of directory or zip file to save TextGrid files to."""
 
     asr: ASRPipeline = field(default_factory=ASRPipeline)
-    """Transformers speech recognition pipeline"""
+    """Transformers speech recognition pipeline."""
 
     io: IOConfig = field(default_factory=IOConfig)
-    """Settings audio and file input/output"""
+    """Settings audio and file input/output."""
 
     tier_name: str = DEFAULT_TRANSCRIPTION_TIER_NAME
-    """Name of the tier in the TextGrid"""
+    """Name of the tier in the TextGrid."""
 
     zipped: bool = False
-    """Use flag to create a zip file of all TextGrids"""
+    """Use zipped flag to create a zip file of all TextGrids. Defaults to not zipping."""
 
     def run(self):
         """Transcribe and write files."""
         if self.output_target.exists():
             if self.io.overwrite:
-                logger.warning("Target %s already exists and may be overwritten.")
+                logger.warning("Target %s already exists and may be overwritten.", self.output_target)
             else:
-                logger.warning("Target %s already exists, but cannot be overwritten. Transcriptions may not be saved.")
+                logger.warning(
+                    "Target %s already exists, but cannot be overwritten. Transcriptions may not be saved.",
+                    self.output_target,
+                )
 
         logger.info("Transcribing  %s files with model %s.", len(self.audio_paths), self.asr.model_name)
 
@@ -80,7 +84,8 @@ class TranscribeIntervals:
     Interval time frames are taken from the source tier, transcribed, and
     transcriptions are added as intervals in a new target tier.
 
-    Output TextGrids have the filename as the corresponding audio files with a .TextGrid suffix.
+    Output TextGrids have the same file basename as the corresponding audio files with a .TextGrid suffix and are saved
+    in the output_target directory.
     """
 
     audio_path: Path
@@ -115,6 +120,7 @@ class TranscribeIntervals:
 
 def main():
     """Main entry point for the CLI."""
+    logging.basicConfig(level=logging.INFO, format="%(name)s : %(levelname)s : %(message)s")
     cli = tyro.cli(Transcribe | TranscribeIntervals)
     try:
         cli.run()
