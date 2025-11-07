@@ -56,3 +56,26 @@ class ASRPipeline:
         logger.debug("Predicting transcription for %s with model %s", audio_path, self.model_name)
         transcription = self._model_pipe(y)["text"]
         return transcription
+
+    # TODO: Add character predictions for phone timestamps
+    # result = asr._model_pipe(audio, return_timestamps="char")
+    # >>> result
+    # {
+    #     "text": "ʌɪʔɪzɡɹeɪɾɹ̩ɹ̩fɔɹ",
+    #     "chunks": [
+    #         {"text": "ʌ", "timestamp": (np.float64(0.28), np.float64(0.3))},
+    #         {"text": "ɪ", "timestamp": (np.float64(1.58), np.float64(1.6))},
+    #         {"text": "ʔ", "timestamp": (np.float64(1.62), np.float64(1.64))},
+    #         {"text": "ɪ", "timestamp": (np.float64(1.76), np.float64(1.78))},
+    #         {"text": "z", "timestamp": (np.float64(1.86), np.float64(1.88))},
+    #         {"text": "ɡ", "timestamp": (np.float64(2.02), np.float64(2.04))},
+    #         {"text": "ɹ", "timestamp": (np.float64(2.04), np.float64(2.08))},
+    #         {"text": "eɪ", "timestamp": (np.float64(2.14), np.float64(2.16))},
+    #         {"text": "ɾ", "timestamp": (np.float64(2.2), np.float64(2.22))},
+    #         {"text": "ɹ̩", "timestamp": (np.float64(2.26), np.float64(2.28))},
+    #         {"text": "ɹ̩", "timestamp": (np.float64(2.48), np.float64(2.5))},
+    #         {"text": "f", "timestamp": (np.float64(2.62), np.float64(2.64))},
+    #         {"text": "ɔ", "timestamp": (np.float64(2.84), np.float64(2.86))},
+    #         {"text": "ɹ", "timestamp": (np.float64(2.9), np.float64(2.92))},
+    #     ],
+    # }

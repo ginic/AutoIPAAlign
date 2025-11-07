@@ -1,14 +1,12 @@
 # Imports
 from pathlib import Path
 import tempfile
-import os
+
 import gradio as gr
-import librosa
-import tgt.core
-import tgt.io3
-import soundfile as sf
-import zipfile
 from transformers import pipeline
+
+from autoipaalign_cli.textgrid_io import TextGridContainer, write_textgrids_to_target
+from autoipaalign_cli.speech_recognition import ASRPipeline
 
 # Constants
 TEXTGRID_DIR = tempfile.mkdtemp()
@@ -72,19 +70,14 @@ def load_model_and_predict(
         raise gr.Error(f"Failed to load model: {str(e)}")
 
 
-# TODO replace with the TextGridContainer.from_audio_and_transcription
 def get_textgrid_contents(audio_in, textgrid_tier_name, transcription_prediction):
     if audio_in is None or transcription_prediction is None:
         return ""
 
-    duration = librosa.get_duration(path=audio_in)
-
-    annotation = tgt.core.Interval(0, duration, transcription_prediction)
-    transcription_tier = tgt.core.IntervalTier(start_time=0, end_time=duration, name=textgrid_tier_name)
-    transcription_tier.add_annotation(annotation)
-    textgrid = tgt.core.TextGrid()
-    textgrid.add_tier(transcription_tier)
-    return tgt.io3.export_to_long_textgrid(textgrid)
+    tg_container = TextGridContainer.from_audio_and_transcription(
+        audio_in, textgrid_tier_name, transcription_prediction
+    )
+    return tg_container.export_to_long_textgrid_str()
 
 
 # TODO replace with TextGridContainer.write_textgrid()
@@ -106,72 +99,40 @@ def get_interactive_download_button(textgrid_contents, textgrid_filename):
     )
 
 
-# TODO Replace with the TextGridContainer.from_textgrid_with_predicted_intervals function
 def transcribe_intervals(audio_in, textgrid_path, source_tier, target_tier, model_state):
     if audio_in is None or textgrid_path is None:
         return "Missing audio or TextGrid input file."
 
-    tg = tgt.io.read_textgrid(textgrid_path.name)
-    tier = tg.get_tier_by_name(source_tier)
-    ipa_tier = tgt.core.IntervalTier(name=target_tier)
+    # Create ASRPipeline from model_state to use CLI transcription logic
+    asr_pipeline = ASRPipeline(model_name=model_state["model_name"])
 
-    for interval in tier.intervals:
-        if not interval.text.strip():  # Skip empty text intervals
-            continue
+    tg_container = TextGridContainer.from_textgrid_with_predict_intervals(
+        audio_in, Path(textgrid_path.name), source_tier, target_tier, asr_pipeline
+    )
 
-        start, end = interval.start_time, interval.end_time
-        try:
-            y, sr = librosa.load(audio_in, sr=None, offset=start, duration=end - start)
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-                sf.write(temp_audio.name, y, sr)
-                prediction = model_state["loaded_model"](temp_audio.name)["text"]
-                ipa_tier.add_annotation(tgt.core.Interval(start, end, prediction))
-                os.remove(temp_audio.name)
-        except Exception as e:
-            ipa_tier.add_annotation(tgt.core.Interval(start, end, f"[Error]: {str(e)}"))
-
-    tg.add_tier(ipa_tier)
-    tgt_str = tgt.io3.export_to_long_textgrid(tg)
-
-    return tgt_str
+    return tg_container.export_to_long_textgrid_str()
 
 
-# TODO replace with TextGridContainer.get_tier_names function as much as possible
 def extract_tier_names(textgrid_file):
     try:
-        tg = tgt.io.read_textgrid(textgrid_file.name)
-        tier_names = [tier.name for tier in tg.tiers]
+        tg_container = TextGridContainer.from_textgrid_file(Path(textgrid_file.name))
+        tier_names = tg_container.get_tier_names()
         return gr.update(choices=tier_names, value=tier_names[0] if tier_names else None)
-    except Exception as e:
+    except Exception:
         return gr.update(choices=[], value=None)
 
 
-# TODO replace with TextGridContainer.validate_against_audio_duration
 def validate_textgrid_for_intervals(audio_path, textgrid_file):
     try:
         if not audio_path or not textgrid_file:
             return gr.update(interactive=False)
 
-        audio_duration = librosa.get_duration(path=audio_path)
-        tg = tgt.io.read_textgrid(textgrid_file.name)
-        tg_end_time = max(tier.end_time for tier in tg.tiers)
-
-        # TextGrid ends later than audio
-        if tg_end_time > audio_duration:
-            raise gr.Error(
-                f"TextGrid ends at {tg_end_time:.2f}s but audio is only {audio_duration:.2f}s. "
-                "Please upload matching files."
-            )
-
-        epsilon = 0.01
-        if abs(tg_end_time - audio_duration) > epsilon:
-            gr.Warning(
-                f"TextGrid ends at {tg_end_time:.2f}s but audio is {audio_duration:.2f}s. "
-                "Only the annotated portion will be transcribed."
-            )
-
+        tg_container = TextGridContainer.from_textgrid_file(Path(textgrid_file.name))
+        tg_container.validate_against_audio_duration(audio_path)
         return gr.update(interactive=True)
 
+    except ValueError as e:
+        raise gr.Error(str(e))
     except Exception as e:
         raise gr.Error(f"Invalid TextGrid or audio file:\n{str(e)}")
 
@@ -188,32 +149,23 @@ def transcribe_multiple_files(model_name, audio_files, model_state, tier_name):
             }
 
         table_data = []
-        tg_paths = []
+        text_grids = []
+        audio_paths = []
 
         for file in audio_files:
+            # Use existing model for prediction (efficient)
             prediction = model_state["loaded_model"](file)["text"]
-            duration = librosa.get_duration(path=file)
 
-            annotation = tgt.core.Interval(0, duration, prediction)
-            transcription_tier = tgt.core.IntervalTier(0, duration, tier_name)
-            transcription_tier.add_annotation(annotation)
-
-            tg = tgt.core.TextGrid()
-            tg.add_tier(transcription_tier)
-
-            tg_str = tgt.io3.export_to_long_textgrid(tg)
-            tg_filename = Path(file).with_suffix(".TextGrid").name
-            tg_path = Path(TEXTGRID_DIR) / tg_filename
-            tg_path.write_text(tg_str)
+            # Use TextGridContainer to create TextGrid (modular, consistent with CLI)
+            tg_container = TextGridContainer.from_audio_and_transcription(file, tier_name, prediction)
 
             table_data.append([Path(file).name, prediction])
-            tg_paths.append(tg_path)
+            text_grids.append(tg_container)
+            audio_paths.append(Path(file))
 
-        # ZIP generation
+        # Write all TextGrids to zip using CLI function
         zip_path = Path(tempfile.mkdtemp()) / "textgrids.zip"
-        with zipfile.ZipFile(zip_path, "w") as zipf:
-            for tg in tg_paths:
-                zipf.write(tg, arcname=tg.name)
+        write_textgrids_to_target(audio_paths, text_grids, zip_path, is_zip=True, is_overwrite=True)
 
         return table_data, str(zip_path), model_state
 
