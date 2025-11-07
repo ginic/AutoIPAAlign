@@ -3,7 +3,6 @@ from pathlib import Path
 import tempfile
 
 import gradio as gr
-from transformers import pipeline
 
 from autoipaalign_cli.textgrid_io import TextGridContainer, write_textgrids_to_target
 from autoipaalign_cli.speech_recognition import ASRPipeline
@@ -60,11 +59,11 @@ def load_model_and_predict(
 
         if model_state["model_name"] != model_name:
             model_state = {
-                "loaded_model": pipeline(task="automatic-speech-recognition", model=model_name),
+                "asr_pipeline": ASRPipeline(model_name=model_name),
                 "model_name": model_name,
             }
 
-        prediction = model_state["loaded_model"](audio_in)["text"]
+        prediction = model_state["asr_pipeline"].predict(audio_in)
         return prediction, model_state
     except Exception as e:
         raise gr.Error(f"Failed to load model: {str(e)}")
@@ -99,18 +98,25 @@ def get_interactive_download_button(textgrid_contents, textgrid_filename):
     )
 
 
-def transcribe_intervals(audio_in, textgrid_path, source_tier, target_tier, model_state):
+def transcribe_intervals(model_name, audio_in, textgrid_path, source_tier, target_tier, model_state):
     if audio_in is None or textgrid_path is None:
-        return "Missing audio or TextGrid input file."
+        return "Missing audio or TextGrid input file.", model_state
 
-    # Create ASRPipeline from model_state to use CLI transcription logic
-    asr_pipeline = ASRPipeline(model_name=model_state["model_name"])
+    # Check if correct model is loaded, reload if necessary
+    if model_state["model_name"] != model_name:
+        model_state = {
+            "asr_pipeline": ASRPipeline(model_name=model_name),
+            "model_name": model_name,
+        }
+
+    # Reuse the ASRPipeline from model_state (efficient if model unchanged)
+    asr_pipeline = model_state["asr_pipeline"]
 
     tg_container = TextGridContainer.from_textgrid_with_predict_intervals(
         audio_in, Path(textgrid_path.name), source_tier, target_tier, asr_pipeline
     )
 
-    return tg_container.export_to_long_textgrid_str()
+    return tg_container.export_to_long_textgrid_str(), model_state
 
 
 def extract_tier_names(textgrid_file):
@@ -142,9 +148,10 @@ def transcribe_multiple_files(model_name, audio_files, model_state, tier_name):
         if not audio_files:
             return [], None, model_state
 
+        # Check if correct model is loaded, reload if necessary
         if model_state["model_name"] != model_name:
             model_state = {
-                "loaded_model": pipeline(task="automatic-speech-recognition", model=model_name),
+                "asr_pipeline": ASRPipeline(model_name=model_name),
                 "model_name": model_name,
             }
 
@@ -153,8 +160,8 @@ def transcribe_multiple_files(model_name, audio_files, model_state, tier_name):
         audio_paths = []
 
         for file in audio_files:
-            # Use existing model for prediction (efficient)
-            prediction = model_state["loaded_model"](file)["text"]
+            # Use ASRPipeline for prediction (consistent with CLI)
+            prediction = model_state["asr_pipeline"].predict(file)
 
             # Use TextGridContainer to create TextGrid (modular, consistent with CLI)
             tg_container = TextGridContainer.from_audio_and_transcription(file, tier_name, prediction)
@@ -175,7 +182,7 @@ def transcribe_multiple_files(model_name, audio_files, model_state, tier_name):
 
 def launch_demo():
     initial_model = {
-        "loaded_model": pipeline(task="automatic-speech-recognition", model=DEFAULT_MODEL),
+        "asr_pipeline": ASRPipeline(model_name=DEFAULT_MODEL),
         "model_name": DEFAULT_MODEL,
     }
 
@@ -310,8 +317,8 @@ If you're unsure which model to use, the default `ginic/full_dataset_train_3_wav
 
         interval_transcribe_btn.click(
             fn=transcribe_intervals,
-            inputs=[interval_audio, interval_textgrid_file, tier_names, target_tier, model_state],
-            outputs=[interval_result],
+            inputs=[model_name, interval_audio, interval_textgrid_file, tier_names, target_tier, model_state],
+            outputs=[interval_result, model_state],
         )
 
         interval_result.change(
