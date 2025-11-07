@@ -71,6 +71,7 @@ def load_model_and_predict(
     except Exception as e:
         raise gr.Error(f"Failed to load model: {str(e)}")
 
+
 # TODO replace with the TextGridContainer.from_audio_and_transcription
 def get_textgrid_contents(audio_in, textgrid_tier_name, transcription_prediction):
     if audio_in is None or transcription_prediction is None:
@@ -85,7 +86,8 @@ def get_textgrid_contents(audio_in, textgrid_tier_name, transcription_prediction
     textgrid.add_tier(transcription_tier)
     return tgt.io3.export_to_long_textgrid(textgrid)
 
-#TODO replace with TextGridContainer.write_textgrid()
+
+# TODO replace with TextGridContainer.write_textgrid()
 def write_textgrid(textgrid_contents, textgrid_filename):
     """Writes the text grid contents to a named file in the temporary directory.
     Returns the path for download.
@@ -133,6 +135,7 @@ def transcribe_intervals(audio_in, textgrid_path, source_tier, target_tier, mode
 
     return tgt_str
 
+
 # TODO replace with TextGridContainer.get_tier_names function as much as possible
 def extract_tier_names(textgrid_file):
     try:
@@ -143,6 +146,7 @@ def extract_tier_names(textgrid_file):
         return gr.update(choices=[], value=None)
 
 
+# TODO replace with TextGridContainer.validate_against_audio_duration
 def validate_textgrid_for_intervals(audio_path, textgrid_file):
     try:
         if not audio_path or not textgrid_file:
@@ -152,6 +156,7 @@ def validate_textgrid_for_intervals(audio_path, textgrid_file):
         tg = tgt.io.read_textgrid(textgrid_file.name)
         tg_end_time = max(tier.end_time for tier in tg.tiers)
 
+        # TextGrid ends later than audio
         if tg_end_time > audio_duration:
             raise gr.Error(
                 f"TextGrid ends at {tg_end_time:.2f}s but audio is only {audio_duration:.2f}s. "
@@ -276,7 +281,7 @@ If you're unsure which model to use, the default `ginic/full_dataset_train_3_wav
         # Interval transcription section
         with gr.Column(visible=False) as interval_section:
             interval_audio = gr.Audio(type="filepath", show_download_button=True, label="Upload Audio File")
-            interval_textgrid_file = gr.File(file_types=[".TextGrid"], label="Upload TextGrid File")
+            interval_textgrid_file = gr.File(file_types=["text", ".TextGrid"], label="Upload TextGrid File")
             tier_names = gr.Dropdown(label="Source Tier (existing)", choices=[], interactive=True)
             target_tier = gr.Textbox(label="Target Tier (new)", value="IPATier", placeholder="e.g. IPATier")
 
