@@ -14,17 +14,17 @@ def mock_asr_pipeline(mocker):
     mock_pipeline = mocker.Mock(spec=ASRPipeline)
     mock_pipeline.model_name = "test-model"
     mock_pipeline._model_pipe = mocker.Mock()
+    mock_pipeline._model_pipe.return_value = {"text": "test transcription"}
     return mock_pipeline
 
 
 def test_transcribe_run_directory(mock_asr_pipeline, tmp_path, shared_datadir):
     """Test Transcribe.run() writing to directory"""
     # Full file transcription does all files at once
-    mock_asr_pipeline._model_pipe.return_value = [{"text": "test transcription"}]
 
     audio_path = shared_datadir / "test1.wav"
     transcribe = Transcribe(
-        asr_pipeline=mock_asr_pipeline,
+        asr=mock_asr_pipeline,
         audio_paths=[audio_path],
         output_target=tmp_path / "output",
         tier_name="ipa",
@@ -51,10 +51,9 @@ def test_transcribe_run_directory(mock_asr_pipeline, tmp_path, shared_datadir):
 def test_transcribe_run_zip(mock_asr_pipeline, tmp_path, shared_datadir):
     """Test Transcribe.run() writing to zip file"""
     # Full file transcription does all files at once
-    mock_asr_pipeline._model_pipe.return_value = [{"text": "test transcription"}]
     audio_path = shared_datadir / "test1.wav"
     transcribe = Transcribe(
-        asr_pipeline=mock_asr_pipeline,
+        asr=mock_asr_pipeline,
         audio_paths=[audio_path],
         output_target=tmp_path / "output.zip",
         tier_name="ipa",
@@ -85,13 +84,12 @@ def test_transcribe_run_zip(mock_asr_pipeline, tmp_path, shared_datadir):
 def test_transcribe_intervals_run(mock_asr_pipeline, tmp_path, shared_datadir):
     """Test TranscribeIntervals.run()"""
     # Intervals predict one at a time
-    mock_asr_pipeline._model_pipe.return_value = {"text": "test transcription"}
 
     audio_path = shared_datadir / "test1.wav"
     textgrid_path = shared_datadir / "test1.TextGrid"
 
     transcribe_intervals = TranscribeIntervals(
-        asr_pipeline=mock_asr_pipeline,
+        asr=mock_asr_pipeline,
         audio_path=audio_path,
         textgrid_path=textgrid_path,
         output_target=tmp_path,
@@ -128,7 +126,7 @@ def test_transcribe_intervals_run_error_handling(mock_asr_pipeline, tmp_path, mo
     textgrid_path = shared_datadir / "test1.TextGrid"
 
     transcribe_intervals = TranscribeIntervals(
-        asr_pipeline=mock_asr_pipeline,
+        asr=mock_asr_pipeline,
         audio_path=audio_path,
         textgrid_path=textgrid_path,
         output_target=tmp_path,

@@ -9,7 +9,6 @@ from dataclasses import dataclass
 import logging
 import os
 from pathlib import Path
-from typing import Any
 import warnings
 import zipfile
 
@@ -153,7 +152,7 @@ class TextGridContainer:
     ) -> "TextGridContainer":
         try:
             y, sr = librosa.load(audio_in, sr=sampling_rate)
-            transcription = asr_pipeline({"array": y, "sampling_rate": sampling_rate})["text"]
+            transcription = asr_pipeline(y)["text"]
         except Exception as e:
             transcription = f"[Error]: {e}"
         return cls.from_audio_and_transcription(audio_in, textgrid_tier_name, transcription)
@@ -235,7 +234,7 @@ class TextGridContainer:
             start, end = interval.start_time, interval.end_time
             try:
                 y, sr = librosa.load(audio_in, sr=sampling_rate, offset=start, duration=end - start)
-                prediction = asr_pipeline({"array": y, "sampling_rate": sampling_rate})["text"]
+                prediction = asr_pipeline(y)["text"]
                 ipa_tier.add_annotation(tgt.core.Interval(start, end, prediction))
 
             except Exception as e:
