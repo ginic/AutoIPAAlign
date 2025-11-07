@@ -42,7 +42,7 @@ class Transcribe:
     """Paths to audio files to transcribe."""
 
     output_target: Path
-    """Name of directory or zip file to save TextGrid files to."""
+    """Path to directory or zip file to save TextGrid files to."""
 
     asr: ASRPipeline = field(default_factory=ASRPipeline)
     """Transformers speech recognition pipeline."""
@@ -88,6 +88,9 @@ class TranscribeIntervals:
     in the output_target directory.
     """
 
+    # TODO currently this handles one audio, textgrid pair at a time, but
+    # could be made to take multiple paths and pair files
+
     audio_path: Path
     """Path to the audio file"""
 
@@ -112,6 +115,7 @@ class TranscribeIntervals:
     def run(self):
         """Execute interval-based transcription."""
         logger.info("Transcribing intervals from %s.", self.textgrid_path)
+        self.output_target.mkdir(exist_ok=True, parents=True)
         tg = TextGridContainer.from_textgrid_with_predict_intervals(
             self.audio_path, self.textgrid_path, self.source_tier, self.target_tier, self.asr
         )

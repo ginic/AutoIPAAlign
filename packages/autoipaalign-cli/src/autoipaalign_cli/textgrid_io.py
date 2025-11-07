@@ -153,6 +153,7 @@ class TextGridContainer:
         try:
             transcription = asr_pipeline.predict(audio_in)
         except Exception as e:
+            logger.warning("Error during transcription of %s: %s", audio_in, e)
             transcription = f"[Error]: {e}"
         return cls.from_audio_and_transcription(audio_in, textgrid_tier_name, transcription)
 
@@ -227,13 +228,21 @@ class TextGridContainer:
         tier = source_tg.get_tier_by_name(source_tier)
         ipa_tier = tgt.core.IntervalTier(name=target_tier)
 
-        for interval in tier.intervals:
+        for i, interval in enumerate(tier.intervals, start=1):
             start, end = interval.start_time, interval.end_time
             try:
                 prediction = asr_pipeline.predict(audio_in, (start, end))
                 ipa_tier.add_annotation(tgt.core.Interval(start, end, prediction))
+            except RuntimeError as e:
+                logger.warning(
+                    "Interval is likely too short to transcribe and will be left blank. RuntimeError during transcription of interval %s in %s: %s",
+                    i,
+                    audio_in,
+                    e,
+                )
 
             except Exception as e:
+                logger.warning("Error during transcription of interval %s in %s: %s", i, audio_in, e)
                 ipa_tier.add_annotation(tgt.core.Interval(start, end, f"[Error]: {e}"))
 
         source_tg.add_tier(ipa_tier)
