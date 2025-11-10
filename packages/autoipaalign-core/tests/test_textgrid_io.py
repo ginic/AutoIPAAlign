@@ -8,6 +8,7 @@ import tgt.core
 import tgt.io3
 
 from autoipaalign_core.textgrid_io import TextGridContainer, write_textgrids_to_target
+from autoipaalign_core.speech_recognition import TranscriptionChunk, TranscriptionWithTimestamps
 
 
 @pytest.fixture
@@ -183,3 +184,149 @@ def test_write_textgrids_to_target_no_overwrite(sample_textgrid, tmp_path):
     # Should raise error on second write with is_overwrite=False
     with pytest.raises(OSError, match="already exists"):
         write_textgrids_to_target(audio_paths, text_grids, target, is_zip=True, is_overwrite=False)
+
+
+def test_create_phone_tier_from_chunks():
+    """Test creating a phone tier from transcription chunks"""
+    chunks = [
+        TranscriptionChunk(text="h", timestamp=(0.0, 0.5)),
+        TranscriptionChunk(text="ə", timestamp=(0.5, 1.0)),
+        TranscriptionChunk(text="l", timestamp=(1.0, 1.5)),
+        TranscriptionChunk(text="oʊ", timestamp=(1.5, 2.0)),
+    ]
+
+    phone_tier = TextGridContainer._create_interval_tier_from_chunks(chunks, "phones", 5.0)
+
+    assert phone_tier.name == "phones"
+    assert phone_tier.start_time == 0
+    assert phone_tier.end_time == 5.0
+    assert len(phone_tier.intervals) == 4
+    assert phone_tier.intervals[0].text == "h"
+    assert phone_tier.intervals[0].start_time == 0.0
+    assert phone_tier.intervals[0].end_time == 0.5
+    assert phone_tier.intervals[3].text == "oʊ"
+    assert phone_tier.intervals[3].start_time == 1.5
+    assert phone_tier.intervals[3].end_time == 2.0
+
+
+def test_from_audio_with_predict_transcription_and_phones(mocker):
+    """Test creating TextGrid with both transcription and phone tiers"""
+    mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.5)
+
+    mock_pipeline = mocker.Mock()
+    mock_result = TranscriptionWithTimestamps(
+        text="həloʊ",
+        chunks=[
+            TranscriptionChunk(text="h", timestamp=(0.0, 1.0)),
+            TranscriptionChunk(text="ə", timestamp=(1.0, 1.5)),
+            TranscriptionChunk(text="l", timestamp=(1.5, 2.0)),
+            TranscriptionChunk(text="oʊ", timestamp=(2.0, 2.5)),
+        ],
+    )
+    mock_pipeline.predict_with_timestamps.return_value = mock_result
+
+    result = TextGridContainer.from_audio_with_predict_transcription(
+        audio_in="/path/to/audio.wav",
+        textgrid_tier_name="ipa",
+        asr_pipeline=mock_pipeline,
+        add_phones=True,
+        phone_tier_name="phones",
+    )
+
+    # Check that both tiers were created
+    assert isinstance(result, TextGridContainer)
+    assert len(result.text_grid.tiers) == 2
+    tier_names = result.get_tier_names()
+    assert set(tier_names) == {"ipa", "phones"}
+
+    # Check transcription tier
+    ipa_tier = result.text_grid.get_tier_by_name("ipa")
+    assert len(ipa_tier.intervals) == 1
+    assert ipa_tier.intervals[0].text == "həloʊ"
+    assert ipa_tier.intervals[0].start_time == 0
+    assert ipa_tier.intervals[0].end_time == 5.5
+
+    # Check phone tier
+    phone_tier = result.text_grid.get_tier_by_name("phones")
+    assert len(phone_tier.intervals) == 4
+    assert phone_tier.intervals[0].text == "h"
+    assert phone_tier.intervals[0].start_time == 0
+    assert phone_tier.intervals[0].end_time == 1.0
+    assert phone_tier.intervals[1].text == "ə"
+    assert phone_tier.intervals[1].start_time == 1.0
+    assert phone_tier.intervals[1].end_time == 1.5
+    assert phone_tier.intervals[2].text == "l"
+    assert phone_tier.intervals[2].start_time == 1.5
+    assert phone_tier.intervals[2].end_time == 2.0
+    assert phone_tier.intervals[3].text == "oʊ"
+    assert phone_tier.intervals[3].start_time == 2.0
+    assert phone_tier.intervals[3].end_time == 2.5
+
+    # Check that predict_with_timestamps was called once
+    assert mock_pipeline.predict_with_timestamps.call_count == 1
+
+
+def test_from_textgrid_with_predict_intervals_and_phones(mocker, temp_textgrid_file):
+    """Test creating TextGrid with interval predictions and phone tier"""
+    mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.0)
+
+    mock_pipeline = mocker.Mock()
+    # For simplicity, assume ASR returns this for both intervals in the word tier
+    mock_result = TranscriptionWithTimestamps(
+        text="həloʊ",
+        chunks=[
+            TranscriptionChunk(text="h", timestamp=(0.0, 1.0)),
+            TranscriptionChunk(text="ə", timestamp=(1.0, 2.0)),
+        ],
+    )
+
+    mock_pipeline.predict_with_timestamps.return_value = mock_result
+
+    result = TextGridContainer.from_textgrid_with_predict_intervals(
+        audio_in="/path/to/audio.wav",
+        textgrid_path=temp_textgrid_file,
+        source_tier="words",
+        target_tier="ipa",
+        asr_pipeline=mock_pipeline,
+        add_phones=True,
+        phone_tier_name="phones",
+    )
+
+    # Check that original tier, target tier, and phone tier exist
+    assert isinstance(result, TextGridContainer)
+    assert len(result.text_grid.tiers) == 3
+    tier_names = result.get_tier_names()
+    assert set(tier_names) == {"words", "ipa", "phones"}
+
+    # Check IPA tier has correct intervals
+    ipa_tier = result.text_grid.get_tier_by_name("ipa")
+    assert len(ipa_tier.intervals) == 2
+    assert ipa_tier.intervals[0].text == "həloʊ"
+    assert ipa_tier.intervals[0].start_time == 0
+    assert ipa_tier.intervals[0].end_time == 2.5
+    assert ipa_tier.intervals[1].text == "həloʊ"
+    assert ipa_tier.intervals[1].start_time == 2.5
+    assert ipa_tier.intervals[1].end_time == 5.0
+
+    # Check phone tier has combined chunks with adjusted timestamps
+    phone_tier = result.text_grid.get_tier_by_name("phones")
+    assert len(phone_tier.intervals) == 4  # 2 from each interval in words
+
+    # First interval phones (adjusted by 0.0 offset)
+    assert phone_tier.intervals[0].text == "h"
+    assert phone_tier.intervals[0].start_time == 0.0
+    assert phone_tier.intervals[0].end_time == 1.0
+    assert phone_tier.intervals[1].text == "ə"
+    assert phone_tier.intervals[1].start_time == 1.0
+    assert phone_tier.intervals[1].end_time == 2.0
+
+    # Second interval phones (adjusted by 2.5)
+    assert phone_tier.intervals[2].text == "h"
+    assert phone_tier.intervals[2].start_time == 2.5
+    assert phone_tier.intervals[2].end_time == 3.5
+    assert phone_tier.intervals[3].text == "ə"
+    assert phone_tier.intervals[3].start_time == 3.5
+    assert phone_tier.intervals[3].end_time == 4.5
+
+    # Prediction happened twice (once per interval)
+    assert mock_pipeline.predict_with_timestamps.call_count == 2

@@ -14,19 +14,24 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_TRANSCRIPTION_TIER_NAME = "ipa"
-DEFAULT_PHONE_ALIGN_TIER_NAME = "phone"
+DEFAULT_PHONE_TIER_NAME = "phone"
 
 
 @dataclass
-class IOConfig:
-    """Shared behaviour for audio and file input/output used
-    during the transcription process.
-    """
-
-    # TODO Configure codec options here in the future
+class OutputConfig:
+    """Shared configuration for file output and TextGrid structure."""
 
     overwrite: bool = False
-    """Use overwrite flag to allow overwriting existing output files. Defaults to not overwriting."""
+    """Allow overwriting existing output files."""
+
+    transcription_tier_name: str = DEFAULT_TRANSCRIPTION_TIER_NAME
+    """Name of the transcription tier in output TextGrids."""
+
+    enable_phones: bool = False
+    """Enable phone alignment tier."""
+
+    phone_tier_name: str = DEFAULT_PHONE_TIER_NAME
+    """Name of the phone alignment tier (only used if enable_phones is True)."""
 
 
 @dataclass
@@ -47,11 +52,8 @@ class Transcribe:
     asr: ASRPipeline = field(default_factory=ASRPipeline)
     """Transformers speech recognition pipeline."""
 
-    io: IOConfig = field(default_factory=IOConfig)
-    """Settings audio and file input/output."""
-
-    tier_name: str = DEFAULT_TRANSCRIPTION_TIER_NAME
-    """Name of the tier in the TextGrid."""
+    output: OutputConfig = field(default_factory=OutputConfig)
+    """Settings for file output and TextGrid structure."""
 
     zipped: bool = False
     """Use zipped flag to create a zip file of all TextGrids. Defaults to not zipping."""
@@ -59,7 +61,7 @@ class Transcribe:
     def run(self):
         """Transcribe and write files."""
         if self.output_target.exists():
-            if self.io.overwrite:
+            if self.output.overwrite:
                 logger.warning("Target %s already exists and may be overwritten.", self.output_target)
             else:
                 logger.warning(
@@ -72,10 +74,16 @@ class Transcribe:
         text_grids = []
 
         for audio_path in self.audio_paths:
-            tg = TextGridContainer.from_audio_with_predict_transcription(audio_path, self.tier_name, self.asr)
+            tg = TextGridContainer.from_audio_with_predict_transcription(
+                audio_path,
+                self.output.transcription_tier_name,
+                self.asr,
+                add_phones=self.output.enable_phones,
+                phone_tier_name=self.output.phone_tier_name,
+            )
             text_grids.append(tg)
 
-        write_textgrids_to_target(self.audio_paths, text_grids, self.output_target, self.zipped, self.io.overwrite)
+        write_textgrids_to_target(self.audio_paths, text_grids, self.output_target, self.zipped, self.output.overwrite)
 
 
 @dataclass
@@ -106,20 +114,25 @@ class TranscribeIntervals:
     asr: ASRPipeline = field(default_factory=ASRPipeline)
     """Transformers speech recognition pipeline"""
 
-    io: IOConfig = field(default_factory=IOConfig)
-    """Settings audio and file input/output"""
-
-    target_tier: str = DEFAULT_TRANSCRIPTION_TIER_NAME
-    """Name of the new tier to create with IPA transcriptions"""
+    output: OutputConfig = field(default_factory=OutputConfig)
+    """Settings for file output and TextGrid structure"""
 
     def run(self):
         """Execute interval-based transcription."""
         logger.info("Transcribing intervals from %s.", self.textgrid_path)
         self.output_target.mkdir(exist_ok=True, parents=True)
+
         tg = TextGridContainer.from_textgrid_with_predict_intervals(
-            self.audio_path, self.textgrid_path, self.source_tier, self.target_tier, self.asr
+            self.audio_path,
+            self.textgrid_path,
+            self.source_tier,
+            self.output.transcription_tier_name,
+            self.asr,
+            add_phones=self.output.enable_phones,
+            phone_tier_name=self.output.phone_tier_name,
         )
-        tg.write_textgrid(self.output_target, self.audio_path, self.io.overwrite)
+
+        tg.write_textgrid(self.output_target, self.audio_path, self.output.overwrite)
 
 
 def main():

@@ -16,7 +16,7 @@ import librosa
 import tgt.core
 import tgt.io3
 
-from autoipaalign_core.speech_recognition import ASRPipeline
+from autoipaalign_core.speech_recognition import ASRPipeline, TranscriptionChunk
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +130,27 @@ class TextGridContainer:
             warnings.warn(warning)  # So this appears in gradio
             logger.warning(warning)
 
+    @staticmethod
+    def _create_interval_tier_from_chunks(
+        chunks: list[TranscriptionChunk], tier_name: str, audio_duration: float
+    ) -> tgt.core.IntervalTier:
+        """Create an IntervalTier from character-level transcription chunks.
+
+        Args:
+            chunks: List of TranscriptionChunk objects with text and timestamps.
+            tier_name: Name for the created tier.
+            audio_duration: Total duration of the audio file (for tier end time).
+
+        Returns:
+            A tgt.core.IntervalTier containing intervals for each chunk.
+        """
+        phone_tier = tgt.core.IntervalTier(start_time=0, end_time=audio_duration, name=tier_name)
+        for chunk in chunks:
+            start, end = chunk.timestamp
+            interval = tgt.core.Interval(start, end, chunk.text)
+            phone_tier.add_annotation(interval)
+        return phone_tier
+
     @classmethod
     def from_textgrid_file(cls, textgrid_file: Path) -> "TextGridContainer":
         """Create a TextGridContainer from an existing TextGrid file.
@@ -149,13 +170,60 @@ class TextGridContainer:
         audio_in: str | os.PathLike[str],
         textgrid_tier_name: str,
         asr_pipeline: ASRPipeline,
+        add_phones: bool = False,
+        phone_tier_name: str = "phone",
     ) -> "TextGridContainer":
+        """Create a TextGrid with transcription tier from audio using ASR.
+
+        Uses ASR to predict transcription. Optionally also creates a phone
+        alignment tier with character-level timestamps.
+
+        Args:
+            audio_in: Path to the audio file.
+            textgrid_tier_name: Name for the transcription tier.
+            asr_pipeline: ASRPipeline for predicting transcriptions.
+            add_phones: If True, also create a phone alignment tier. Defaults to False.
+            phone_tier_name: Name for the phone alignment tier. Defaults to "phone".
+
+        Returns:
+            A new TextGridContainer with transcription tier (and optionally phone tier).
+        """
+        if audio_in is None:
+            return cls(text_grid=tgt.core.TextGrid())
+
+        if not add_phones:
+            # Simple transcription without timestamps
+            try:
+                transcription = asr_pipeline.predict(audio_in)
+            except Exception as e:
+                logger.warning("Error during transcription of %s: %s", audio_in, e)
+                transcription = f"[Error]: {e}"
+            return cls.from_audio_and_transcription(audio_in, textgrid_tier_name, transcription)
+
+        # Transcription with phone alignments
         try:
-            transcription = asr_pipeline.predict(audio_in)
+            result = asr_pipeline.predict_with_timestamps(audio_in)
         except Exception as e:
-            logger.warning("Error during transcription of %s: %s", audio_in, e)
-            transcription = f"[Error]: {e}"
-        return cls.from_audio_and_transcription(audio_in, textgrid_tier_name, transcription)
+            logger.warning("Error during transcription with timestamps of %s: %s", audio_in, e)
+            # Fall back to creating a simple error TextGrid
+            return cls.from_audio_and_transcription(audio_in, textgrid_tier_name, f"[Error]: {e}")
+
+        duration = librosa.get_duration(path=audio_in, sr=None)
+
+        # Create transcription tier with full text
+        transcription_interval = tgt.core.Interval(0, duration, result.text)
+        transcription_tier = tgt.core.IntervalTier(start_time=0, end_time=duration, name=textgrid_tier_name)
+        transcription_tier.add_annotation(transcription_interval)
+
+        # Create phone tier with character-level intervals
+        phone_tier = cls._create_interval_tier_from_chunks(result.chunks, phone_tier_name, duration)
+
+        # Add both tiers to TextGrid
+        textgrid = tgt.core.TextGrid()
+        textgrid.add_tier(transcription_tier)
+        textgrid.add_tier(phone_tier)
+
+        return cls(text_grid=textgrid)
 
     @classmethod
     def from_audio_and_transcription(
@@ -195,22 +263,28 @@ class TextGridContainer:
         source_tier: str,
         target_tier: str,
         asr_pipeline: ASRPipeline,
+        add_phones: bool = False,
+        phone_tier_name: str = "phone",
     ) -> "TextGridContainer":
         """Create a TextGrid with ASR predictions for each interval in a source tier.
 
         Reads an existing TextGrid, extracts audio segments corresponding to each
         non-empty interval in the source tier, runs ASR on each segment, and adds
-        the predictions to a new target tier. The original tiers are preserved.
+        the predictions to a new target tier. Optionally also creates a phone
+        alignment tier. The original tiers are preserved.
 
         Args:
             audio_in: Path to the audio file.
             textgrid_path: Path to the existing TextGrid file.
             source_tier: Name of the tier containing intervals to process.
             target_tier: Name for the new tier containing ASR predictions.
-            asr_pipeline: ASRPipeline for predicting transcriptions
+            asr_pipeline: ASRPipeline for predicting transcriptions.
+            add_phones: If True, also create a phone alignment tier. Defaults to False.
+            phone_tier_name: Name for the phone alignment tier. Defaults to "phone".
 
         Returns:
-            A new TextGridContainer with all original tiers plus the new target tier.
+            A new TextGridContainer with all original tiers plus the new target tier
+            (and optionally phone tier).
 
         Raises:
             TypeError: If audio_in or textgrid_path is None.
@@ -228,10 +302,25 @@ class TextGridContainer:
         tier = source_tg.get_tier_by_name(source_tier)
         ipa_tier = tgt.core.IntervalTier(name=target_tier)
 
+        all_phone_chunks = []
+
         for i, interval in enumerate(tier.intervals, start=1):
             start, end = interval.start_time, interval.end_time
             try:
-                prediction = asr_pipeline.predict(audio_in, (start, end))
+                if add_phones:
+                    transcription_with_timestamps = asr_pipeline.predict_with_timestamps(audio_in, (start, end))
+                    prediction = transcription_with_timestamps.text
+
+                    for chunk in transcription_with_timestamps.chunks:
+                        chunk_start, chunk_end = chunk.timestamp
+                        adjusted_chunk = TranscriptionChunk(
+                            text=chunk.text, timestamp=(start + chunk_start, start + chunk_end)
+                        )
+                        all_phone_chunks.append(adjusted_chunk)
+
+                else:
+                    prediction = asr_pipeline.predict(audio_in, (start, end))
+
                 ipa_tier.add_annotation(tgt.core.Interval(start, end, prediction))
             except RuntimeError as e:
                 logger.warning(
@@ -243,8 +332,19 @@ class TextGridContainer:
 
             except Exception as e:
                 logger.warning("Error during transcription of interval %s in %s: %s", i, audio_in, e)
-                ipa_tier.add_annotation(tgt.core.Interval(start, end, f"[Error]: {e}"))
+                error_message = f"[Error]: {e}"
+                ipa_tier.add_annotation(tgt.core.Interval(start, end, error_message))
+                if add_phones:
+                    all_phone_chunks.append(TranscriptionChunk(error_message, (start, end)))
 
+        # Add interval tier
         source_tg.add_tier(ipa_tier)
+
+        # Add phone alignment if desired
+        if add_phones:
+            audio_duration = librosa.get_duration(path=audio_in, sr=None)
+            # Create phone tier from all accumulated chunks
+            phone_tier = cls._create_interval_tier_from_chunks(all_phone_chunks, phone_tier_name, audio_duration)
+            source_tg.add_tier(phone_tier)
 
         return cls(text_grid=source_tg)

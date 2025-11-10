@@ -24,6 +24,49 @@ DEFAULT_MODEL = "ginic/full_dataset_train_3_wav2vec2-large-xlsr-53-buckeye-ipa"
 
 
 @dataclass
+class TranscriptionChunk:
+    """Represents a single aligned transcribed interval (word/phone) with timestamp information."""
+
+    text: str
+    """The text transcribed within the interval"""
+
+    timestamp: tuple[float, float]
+    """Start and end time in seconds."""
+
+
+@dataclass
+class TranscriptionWithTimestamps:
+    """Represents a full transcription with transcribed sub-intervals and their timestamps."""
+
+    text: str
+    """The full transcription text."""
+
+    chunks: list[TranscriptionChunk]
+    """List of individual characters/phones with their timestamps."""
+
+
+def load_audio(audio_path: str | os.PathLike[str], sampling_rate: int, interval: tuple[float, float] | None = None):
+    """Load audio file with optional interval extraction.
+
+    Args:
+        audio_path: Path to the audio file
+        sampling_rate: Sampling rate for audio preprocessing
+        interval: Optional tuple of (start, end) times in seconds
+
+    Returns:
+        Audio array loaded at the specified sampling rate
+    """
+    if interval:
+        logger.debug("Loading interval %s from audio %s", interval, audio_path)
+        start, end = interval
+        y, sr = librosa.load(audio_path, sr=sampling_rate, offset=start, duration=end - start)
+    else:
+        logger.debug("Loading audio %s", audio_path)
+        y, sr = librosa.load(audio_path, sr=sampling_rate)
+    return y
+
+
+@dataclass
 class ASRPipeline:
     """Handles loading and configuration of the Transformer pipeline"""
 
@@ -45,37 +88,42 @@ class ASRPipeline:
         )
 
     def predict(self, audio_path: str | os.PathLike[str], interval: tuple[float, float] | None = None) -> str:
-        if interval:
-            logger.debug("Loading interval %s from audio %s", interval, audio_path)
-            start, end = interval
-            y, sr = librosa.load(audio_path, sr=self.sampling_rate, offset=start, duration=end - start)
-        else:
-            logger.debug("Loading audio %s", audio_path)
-            y, sr = librosa.load(audio_path, sr=self.sampling_rate)
+        """Predict transcription for an audio file.
 
+        Args:
+            audio_path: Path to the audio file
+            interval: Optional tuple of (start, end) times in seconds
+
+        Returns:
+            Transcription text
+        """
+        y = load_audio(audio_path, self.sampling_rate, interval)
         logger.debug("Predicting transcription for %s with model %s", audio_path, self.model_name)
         transcription = self._model_pipe(y)["text"]
         return transcription
 
-    # TODO: Add character predictions for phone timestamps
-    # result = asr._model_pipe(audio, return_timestamps="char")
-    # >>> result
-    # {
-    #     "text": "ʌɪʔɪzɡɹeɪɾɹ̩ɹ̩fɔɹ",
-    #     "chunks": [
-    #         {"text": "ʌ", "timestamp": (np.float64(0.28), np.float64(0.3))},
-    #         {"text": "ɪ", "timestamp": (np.float64(1.58), np.float64(1.6))},
-    #         {"text": "ʔ", "timestamp": (np.float64(1.62), np.float64(1.64))},
-    #         {"text": "ɪ", "timestamp": (np.float64(1.76), np.float64(1.78))},
-    #         {"text": "z", "timestamp": (np.float64(1.86), np.float64(1.88))},
-    #         {"text": "ɡ", "timestamp": (np.float64(2.02), np.float64(2.04))},
-    #         {"text": "ɹ", "timestamp": (np.float64(2.04), np.float64(2.08))},
-    #         {"text": "eɪ", "timestamp": (np.float64(2.14), np.float64(2.16))},
-    #         {"text": "ɾ", "timestamp": (np.float64(2.2), np.float64(2.22))},
-    #         {"text": "ɹ̩", "timestamp": (np.float64(2.26), np.float64(2.28))},
-    #         {"text": "ɹ̩", "timestamp": (np.float64(2.48), np.float64(2.5))},
-    #         {"text": "f", "timestamp": (np.float64(2.62), np.float64(2.64))},
-    #         {"text": "ɔ", "timestamp": (np.float64(2.84), np.float64(2.86))},
-    #         {"text": "ɹ", "timestamp": (np.float64(2.9), np.float64(2.92))},
-    #     ],
-    # }
+    def predict_with_timestamps(
+        self, audio_path: str | os.PathLike[str], interval: tuple[float, float] | None = None
+    ) -> TranscriptionWithTimestamps:
+        """Predict transcription with character-level timestamps for an audio file.
+
+        Args:
+            audio_path: Path to the audio file
+            interval: Optional tuple of (start, end) times in seconds
+
+        Returns:
+            TranscriptionWithTimestamps containing full text and character-level chunks
+        """
+        y = load_audio(audio_path, self.sampling_rate, interval)
+        logger.debug("Predicting transcription with timestamps for %s with model %s", audio_path, self.model_name)
+        result = self._model_pipe(y, return_timestamps="char")
+
+        # Collect TranscriptionChunk objects
+        chunks = []
+        for c in result.get("chunks", []):
+            # chunk timestamp as np.float
+            timestamp = c["timestamp"]
+            chunk = TranscriptionChunk(text=c["text"], timestamp=(timestamp[0].item(), timestamp[1].item()))
+            chunks.append(chunk)
+
+        return TranscriptionWithTimestamps(text=result["text"], chunks=chunks)

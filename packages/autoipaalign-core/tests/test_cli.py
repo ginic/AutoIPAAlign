@@ -5,7 +5,7 @@ import zipfile
 import pytest
 import tgt.io3
 
-from autoipaalign_core.cli import Transcribe, TranscribeIntervals
+from autoipaalign_core.cli import Transcribe, TranscribeIntervals, OutputConfig
 from autoipaalign_core.speech_recognition import ASRPipeline
 
 
@@ -24,11 +24,12 @@ def test_transcribe_run_directory(mock_asr_pipeline, tmp_path, shared_datadir):
     # Full file transcription does all files at once
 
     audio_path = shared_datadir / "test1.wav"
+    output_config = OutputConfig(transcription_tier_name="ipa")
     transcribe = Transcribe(
         asr=mock_asr_pipeline,
         audio_paths=[audio_path],
         output_target=tmp_path / "output",
-        tier_name="ipa",
+        output=output_config,
         zipped=False,
     )
 
@@ -53,11 +54,12 @@ def test_transcribe_run_zip(mock_asr_pipeline, tmp_path, shared_datadir):
     """Test Transcribe.run() writing to zip file"""
     # Full file transcription does all files at once
     audio_path = shared_datadir / "test1.wav"
+    output_config = OutputConfig(transcription_tier_name="ipa")
     transcribe = Transcribe(
         asr=mock_asr_pipeline,
         audio_paths=[audio_path],
         output_target=tmp_path / "output.zip",
-        tier_name="ipa",
+        output=output_config,
         zipped=True,
     )
 
@@ -89,13 +91,14 @@ def test_transcribe_intervals_run(mock_asr_pipeline, tmp_path, shared_datadir):
     audio_path = shared_datadir / "test1.wav"
     textgrid_path = shared_datadir / "test1.TextGrid"
 
+    output_config = OutputConfig(transcription_tier_name="ipa")
     transcribe_intervals = TranscribeIntervals(
         asr=mock_asr_pipeline,
         audio_path=audio_path,
         textgrid_path=textgrid_path,
         output_target=tmp_path,
         source_tier="words",
-        target_tier="ipa",
+        output=output_config,
     )
 
     transcribe_intervals.run()
@@ -125,13 +128,14 @@ def test_transcribe_intervals_run_error_handling(mock_asr_pipeline, tmp_path, mo
     audio_path = shared_datadir / "test1.wav"
     textgrid_path = shared_datadir / "test1.TextGrid"
 
+    output_config = OutputConfig(transcription_tier_name="ipa")
     transcribe_intervals = TranscribeIntervals(
         asr=mock_asr_pipeline,
         audio_path=audio_path,
         textgrid_path=textgrid_path,
         output_target=tmp_path,
         source_tier="words",
-        target_tier="ipa",
+        output=output_config,
     )
 
     # Should complete without raising, errors written to TextGrid
