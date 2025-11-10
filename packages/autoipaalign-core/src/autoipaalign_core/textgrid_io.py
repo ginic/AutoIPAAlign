@@ -16,7 +16,7 @@ import librosa
 import tgt.core
 import tgt.io3
 
-from autoipaalign_cli.speech_recognition import ASRPipeline
+from autoipaalign_core.speech_recognition import ASRPipeline
 
 logger = logging.getLogger(__name__)
 

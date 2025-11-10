@@ -11,7 +11,7 @@ resolution-markers = [
 [manifest]
 members = [
     "autoipaalign",
-    "autoipaalign-cli",
+    "autoipaalign-core",
     "autoipaalign-compare",
     "autoipaalign-web",
 ]
@@ -152,9 +152,9 @@ version = "0.1.0"
 source = { virtual = "." }
 
 [[package]]
-name = "autoipaalign-cli"
+name = "autoipaalign-core"
 version = "0.1.0"
-source = { editable = "packages/autoipaalign-cli" }
+source = { editable = "packages/autoipaalign-core" }
 dependencies = [
     { name = "librosa" },
     { name = "soundfile" },
@@ -196,7 +196,7 @@ name = "autoipaalign-compare"
 version = "0.1.0"
 source = { editable = "packages/autoipaalign-compare" }
 dependencies = [
-    { name = "autoipaalign-cli" },
+    { name = "autoipaalign-core" },
     { name = "tgt" },
 ]
 
@@ -211,7 +211,7 @@ whisper = [
 
 [package.metadata]
 requires-dist = [
-    { name = "autoipaalign-cli", editable = "packages/autoipaalign-cli" },
+    { name = "autoipaalign-core", editable = "packages/autoipaalign-core" },
     { name = "openai-whisper", marker = "extra == 'whisper'" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'" },
@@ -224,13 +224,13 @@ name = "autoipaalign-web"
 version = "0.1.0"
 source = { editable = "packages/autoipaalign-web" }
 dependencies = [
-    { name = "autoipaalign-cli" },
+    { name = "autoipaalign-core" },
     { name = "gradio" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "autoipaalign-cli", editable = "packages/autoipaalign-cli" },
+    { name = "autoipaalign-core", editable = "packages/autoipaalign-core" },
     { name = "gradio", specifier = "==5.29.0" },
 ]
 

@@ -7,7 +7,7 @@ import pytest
 import tgt.core
 import tgt.io3
 
-from autoipaalign_cli.textgrid_io import TextGridContainer, write_textgrids_to_target
+from autoipaalign_core.textgrid_io import TextGridContainer, write_textgrids_to_target
 
 
 @pytest.fixture
@@ -68,7 +68,7 @@ def test_from_textgrid_file(temp_textgrid_file):
 
 def test_from_audio_and_transcription(mocker):
     """Test creating TextGrid from audio and transcription"""
-    mocker.patch("autoipaalign_cli.textgrid_io.librosa.get_duration", return_value=5.5)
+    mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.5)
 
     result = TextGridContainer.from_audio_and_transcription(
         audio_in="/path/to/audio.wav", textgrid_tier_name="transcription", transcription="hello world"
@@ -91,7 +91,7 @@ def test_from_audio_and_transcription(mocker):
 
 def test_from_textgrid_with_predict_intervals(mocker, temp_textgrid_file):
     """Test creating TextGrid with mock ASR predictions"""
-    mocker.patch("autoipaalign_cli.textgrid_io.librosa.load", return_value=([0.1, 0.2, 0.3], 16000))
+    mocker.patch("autoipaalign_core.textgrid_io.librosa.load", return_value=([0.1, 0.2, 0.3], 16000))
 
     mock_pipeline = mocker.Mock()
     mock_pipeline.predict.return_value = "həloʊ"
@@ -126,8 +126,8 @@ def test_from_textgrid_with_predict_intervals(mocker, temp_textgrid_file):
 
 
 def test_from_audio_with_predict_transcription(mocker):
-    mocker.patch("autoipaalign_cli.textgrid_io.librosa.load", return_value=([0.1, 0.2, 0.3], 16000))
-    mocker.patch("autoipaalign_cli.textgrid_io.librosa.get_duration", return_value=5.5)
+    mocker.patch("autoipaalign_core.textgrid_io.librosa.load", return_value=([0.1, 0.2, 0.3], 16000))
+    mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.5)
     mock_pipeline = mocker.Mock()
     mock_pipeline.predict.return_value = "hello"
     tg = TextGridContainer.from_audio_with_predict_transcription(

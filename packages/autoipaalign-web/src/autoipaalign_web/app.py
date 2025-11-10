@@ -4,8 +4,8 @@ import tempfile
 
 import gradio as gr
 
-from autoipaalign_cli.textgrid_io import TextGridContainer, write_textgrids_to_target
-from autoipaalign_cli.speech_recognition import ASRPipeline
+from autoipaalign_core.textgrid_io import TextGridContainer, write_textgrids_to_target
+from autoipaalign_core.speech_recognition import ASRPipeline
 
 # Constants
 TEXTGRID_DIR = tempfile.mkdtemp()

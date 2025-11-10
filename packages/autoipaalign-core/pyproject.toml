@@ -1,5 +1,5 @@
 [project]
-name = "autoipaalign-cli"
+name = "autoipaalign-core"
 version = "0.1.0"
 description = "Core library and CLI for automatic IPA transcription and forced alignment"
 requires-python = ">=3.9"
@@ -19,7 +19,7 @@ dev = [
 ]
 
 [project.scripts]
-autoipaalign = "autoipaalign_cli.cli:main"
+autoipaalign = "autoipaalign_core.cli:main"
 
 
 [build-system]

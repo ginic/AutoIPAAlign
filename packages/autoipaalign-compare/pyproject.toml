@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Tools for comparing forced alignments across multiple ASR systems"
 requires-python = ">=3.9"
 dependencies = [
-    "autoipaalign-cli",
+    "autoipaalign-core",
     "tgt",
 ]
 
@@ -18,7 +18,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-autoipaalign-cli = { workspace = true }
+autoipaalign-core = { workspace = true }
 
 # Note: Montreal Forced Aligner (MFA) is an optional external tool
 # Install via conda: conda install -c conda-forge montreal-forced-aligner

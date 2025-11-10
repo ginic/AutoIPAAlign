@@ -6,7 +6,7 @@ Automatic IPA transcription and forced alignment toolkit with CLI, comparison to
 
 This is a UV workspace containing multiple packages:
 
-- **autoipaalign-cli**: Core library and command-line interface for IPA transcription
+- **autoipaalign-core**: Core library and command-line interface for IPA transcription
 - **autoipaalign-compare**: Tools for comparing alignments across different ASR systems
 - **autoipaalign-web**: Gradio web interface for interactive transcription
 
@@ -62,7 +62,7 @@ You can install specific packages as needed:
 
 ```bash
 # CLI tool only
-uv pip install -e packages/autoipaalign-cli
+uv pip install -e packages/autoipaalign-core
 
 # With comparison tools
 uv pip install -e packages/autoipaalign-compare
@@ -106,7 +106,7 @@ Compare alignments from different ASR systems (documentation coming soon).
 
 ### Running Tests
 
-To run unit tests, you can run `uv run pytest` from the root of the repository or inside any of the package subfolders (e.g. `packages/autoipaalign-cli`).
+To run unit tests, you can run `uv run pytest` from the root of the repository or inside any of the package subfolders (e.g. `packages/autoipaalign-core`).
 
 ### Linting
 
