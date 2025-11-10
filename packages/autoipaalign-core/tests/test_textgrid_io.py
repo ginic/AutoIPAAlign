@@ -195,11 +195,11 @@ def test_create_phone_tier_from_chunks():
         TranscriptionChunk(text="oʊ", timestamp=(1.5, 2.0)),
     ]
 
-    phone_tier = TextGridContainer._create_interval_tier_from_chunks(chunks, "phones", 5.0)
+    phone_tier = TextGridContainer._create_interval_tier_from_chunks(chunks, "phones")
 
     assert phone_tier.name == "phones"
     assert phone_tier.start_time == 0
-    assert phone_tier.end_time == 5.0
+    assert phone_tier.end_time == 2.0
     assert len(phone_tier.intervals) == 4
     assert phone_tier.intervals[0].text == "h"
     assert phone_tier.intervals[0].start_time == 0.0
@@ -311,7 +311,8 @@ def test_from_textgrid_with_predict_intervals_and_phones(mocker, temp_textgrid_f
     # Check phone tier has combined chunks with adjusted timestamps
     phone_tier = result.text_grid.get_tier_by_name("phones")
     assert len(phone_tier.intervals) == 4  # 2 from each interval in words
-
+    assert phone_tier.start_time == 0
+    assert phone_tier.end_time == 4.5
     # First interval phones (adjusted by 0.0 offset)
     assert phone_tier.intervals[0].text == "h"
     assert phone_tier.intervals[0].start_time == 0.0
@@ -329,4 +330,271 @@ def test_from_textgrid_with_predict_intervals_and_phones(mocker, temp_textgrid_f
     assert phone_tier.intervals[3].end_time == 4.5
 
     # Prediction happened twice (once per interval)
+    assert mock_pipeline.predict_with_timestamps.call_count == 2
+
+
+def test_from_audio_with_predict_transcription_error_no_phones(mocker):
+    """Test error handling during transcription when add_phones=False"""
+    mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.5)
+
+    mock_pipeline = mocker.Mock()
+    mock_pipeline.predict.side_effect = RuntimeError("Model failed to load")
+
+    result = TextGridContainer.from_audio_with_predict_transcription(
+        audio_in="/path/to/audio.wav",
+        textgrid_tier_name="ipa",
+        asr_pipeline=mock_pipeline,
+        add_phones=False,
+    )
+
+    # Check that error message was added to the TextGrid
+    assert isinstance(result, TextGridContainer)
+    assert len(result.text_grid.tiers) == 1
+    tier = result.text_grid.get_tier_by_name("ipa")
+    assert len(tier.intervals) == 1
+    assert tier.intervals[0].text == "[Error]: Model failed to load"
+    assert tier.intervals[0].start_time == 0
+    assert tier.intervals[0].end_time == 5.5
+
+
+def test_from_audio_with_predict_transcription_error_with_phones(mocker):
+    """Test error handling during transcription when add_phones=True"""
+    mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.5)
+
+    mock_pipeline = mocker.Mock()
+    mock_pipeline.predict_with_timestamps.side_effect = RuntimeError("Timestamp extraction failed")
+
+    result = TextGridContainer.from_audio_with_predict_transcription(
+        audio_in="/path/to/audio.wav",
+        textgrid_tier_name="ipa",
+        asr_pipeline=mock_pipeline,
+        add_phones=True,
+        phone_tier_name="phones",
+    )
+
+    # Check that both tiers were created with error messages
+    assert isinstance(result, TextGridContainer)
+    assert len(result.text_grid.tiers) == 2
+    assert set(result.get_tier_names()) == {"ipa", "phones"}
+
+    # Check transcription tier has error message
+    ipa_tier = result.text_grid.get_tier_by_name("ipa")
+    assert len(ipa_tier.intervals) == 1
+    assert ipa_tier.intervals[0].text == "[Error]: Timestamp extraction failed"
+    assert ipa_tier.intervals[0].start_time == 0
+    assert ipa_tier.intervals[0].end_time == 5.5
+
+    # Check phone tier also has error message
+    phone_tier = result.text_grid.get_tier_by_name("phones")
+    assert len(phone_tier.intervals) == 0
+
+
+def test_from_textgrid_with_predict_intervals_error_no_phones(mocker, temp_textgrid_file):
+    """Test error handling during interval transcription when add_phones=False"""
+    mock_pipeline = mocker.Mock()
+
+    mock_pipeline.predict.side_effect = OSError("Audio not accessible")
+
+    result = TextGridContainer.from_textgrid_with_predict_intervals(
+        audio_in="/path/to/audio.wav",
+        textgrid_path=temp_textgrid_file,
+        source_tier="words",
+        target_tier="ipa",
+        asr_pipeline=mock_pipeline,
+        add_phones=False,
+    )
+
+    # Check that original tier and target tier exist
+    assert isinstance(result, TextGridContainer)
+    assert len(result.text_grid.tiers) == 2
+    tier_names = result.get_tier_names()
+    assert set(tier_names) == {"words", "ipa"}
+
+    # Check IPA tier - first interval has transcription, second has error
+    ipa_tier = result.text_grid.get_tier_by_name("ipa")
+    assert len(ipa_tier.intervals) == 2
+
+    # First interval succeeded
+    assert ipa_tier.intervals[0].text == "[Error]: Audio not accessible"
+    assert ipa_tier.intervals[0].start_time == 0
+    assert ipa_tier.intervals[0].end_time == 2.5
+
+    # Second interval has error message
+    assert ipa_tier.intervals[1].text == "[Error]: Audio not accessible"
+    assert ipa_tier.intervals[1].start_time == 2.5
+    assert ipa_tier.intervals[1].end_time == 5.0
+
+    # Prediction was attempted twice
+    assert mock_pipeline.predict.call_count == 2
+
+
+def test_from_textgrid_with_predict_intervals_runtime_error_ignored(mocker, temp_textgrid_file):
+    """Test error handling during interval transcription when add_phones=False"""
+    mock_pipeline = mocker.Mock()
+
+    mock_pipeline.predict.side_effect = RuntimeError("Audio not accessible")
+
+    result = TextGridContainer.from_textgrid_with_predict_intervals(
+        audio_in="/path/to/audio.wav",
+        textgrid_path=temp_textgrid_file,
+        source_tier="words",
+        target_tier="ipa",
+        asr_pipeline=mock_pipeline,
+        add_phones=False,
+    )
+
+    # Check that original tier and target tier exist
+    assert isinstance(result, TextGridContainer)
+    assert len(result.text_grid.tiers) == 2
+    tier_names = result.get_tier_names()
+    assert set(tier_names) == {"words", "ipa"}
+
+    # Check IPA tier - first interval has transcription, second has error
+    ipa_tier = result.text_grid.get_tier_by_name("ipa")
+    assert len(ipa_tier.intervals) == 0
+    assert mock_pipeline.predict.call_count == 2
+
+
+def test_from_textgrid_with_predict_intervals_error_with_phones(mocker, temp_textgrid_file):
+    """Test error handling during interval transcription when add_phones=True"""
+    mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.0)
+
+    mock_pipeline = mocker.Mock()
+    # First interval succeeds with phone chunks
+    success_result = TranscriptionWithTimestamps(
+        text="həloʊ",
+        chunks=[
+            TranscriptionChunk(text="h", timestamp=(0.0, 1.0)),
+            TranscriptionChunk(text="ə", timestamp=(1.0, 2.0)),
+        ],
+    )
+    # Second interval fails
+    mock_pipeline.predict_with_timestamps.side_effect = [
+        success_result,
+        ValueError("Timestamp extraction failed"),
+    ]
+
+    result = TextGridContainer.from_textgrid_with_predict_intervals(
+        audio_in="/path/to/audio.wav",
+        textgrid_path=temp_textgrid_file,
+        source_tier="words",
+        target_tier="ipa",
+        asr_pipeline=mock_pipeline,
+        add_phones=True,
+        phone_tier_name="phones",
+    )
+
+    # Check that all three tiers exist
+    assert isinstance(result, TextGridContainer)
+    assert len(result.text_grid.tiers) == 3
+    tier_names = result.get_tier_names()
+    assert set(tier_names) == {"words", "ipa", "phones"}
+
+    # Check IPA tier - first interval has transcription, second has error
+    ipa_tier = result.text_grid.get_tier_by_name("ipa")
+    assert len(ipa_tier.intervals) == 2
+    assert ipa_tier.intervals[0].text == "həloʊ"
+    assert ipa_tier.intervals[0].start_time == 0
+    assert ipa_tier.intervals[0].end_time == 2.5
+    assert ipa_tier.intervals[1].text == "[Error]: Timestamp extraction failed"
+    assert ipa_tier.intervals[1].start_time == 2.5
+    assert ipa_tier.intervals[1].end_time == 5.0
+
+    # Check phone tier has chunks from successful interval and error from failed interval
+    phone_tier = result.text_grid.get_tier_by_name("phones")
+    assert len(phone_tier.intervals) == 3  # 2 phones from first interval + 1 error from second
+
+    # First interval phones (adjusted by 0.0 offset)
+    assert phone_tier.intervals[0].text == "h"
+    assert phone_tier.intervals[0].start_time == 0.0
+    assert phone_tier.intervals[0].end_time == 1.0
+    assert phone_tier.intervals[1].text == "ə"
+    assert phone_tier.intervals[1].start_time == 1.0
+    assert phone_tier.intervals[1].end_time == 2.0
+
+    # Second interval error (adjusted by 2.5 offset)
+    assert phone_tier.intervals[2].text == "[Error]: Timestamp extraction failed"
+    assert phone_tier.intervals[2].start_time == 2.5
+    assert phone_tier.intervals[2].end_time == 5.0
+
+    # Prediction was attempted twice
+    assert mock_pipeline.predict_with_timestamps.call_count == 2
+
+
+def test_from_audio_with_predict_transcription_empty_phone_chunks(mocker):
+    """Test handling when predict_with_timestamps returns empty chunks"""
+    mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.5)
+
+    mock_pipeline = mocker.Mock()
+    # Model returns transcription but no phone chunks
+    mock_result = TranscriptionWithTimestamps(text="həloʊ", chunks=[])
+    mock_pipeline.predict_with_timestamps.return_value = mock_result
+
+    result = TextGridContainer.from_audio_with_predict_transcription(
+        audio_in="/path/to/audio.wav",
+        textgrid_tier_name="ipa",
+        asr_pipeline=mock_pipeline,
+        add_phones=True,
+        phone_tier_name="phones",
+    )
+
+    # Check that both tiers were created
+    assert isinstance(result, TextGridContainer)
+    assert len(result.text_grid.tiers) == 2
+    tier_names = result.get_tier_names()
+    assert set(tier_names) == {"ipa", "phones"}
+
+    # Check transcription tier has the text
+    ipa_tier = result.text_grid.get_tier_by_name("ipa")
+    assert len(ipa_tier.intervals) == 1
+    assert ipa_tier.intervals[0].text == "həloʊ"
+    assert ipa_tier.intervals[0].start_time == 0
+    assert ipa_tier.intervals[0].end_time == 5.5
+
+    # Check phone tier is empty (no intervals)
+    phone_tier = result.text_grid.get_tier_by_name("phones")
+    assert len(phone_tier.intervals) == 0
+
+
+def test_from_textgrid_with_predict_intervals_empty_phone_chunks(mocker, temp_textgrid_file):
+    """Test handling when predict_with_timestamps returns empty chunks during interval transcription"""
+    mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.0)
+
+    mock_pipeline = mocker.Mock()
+    # Both intervals return transcription but no phone chunks
+    mock_result1 = TranscriptionWithTimestamps(text="həloʊ", chunks=[])
+    mock_result2 = TranscriptionWithTimestamps(text="wɜrld", chunks=[])
+    mock_pipeline.predict_with_timestamps.side_effect = [mock_result1, mock_result2]
+
+    result = TextGridContainer.from_textgrid_with_predict_intervals(
+        audio_in="/path/to/audio.wav",
+        textgrid_path=temp_textgrid_file,
+        source_tier="words",
+        target_tier="ipa",
+        asr_pipeline=mock_pipeline,
+        add_phones=True,
+        phone_tier_name="phones",
+    )
+
+    # Check that all three tiers exist
+    assert isinstance(result, TextGridContainer)
+    assert len(result.text_grid.tiers) == 3
+    tier_names = result.get_tier_names()
+    assert set(tier_names) == {"words", "ipa", "phones"}
+
+    # Check IPA tier has transcriptions
+    ipa_tier = result.text_grid.get_tier_by_name("ipa")
+    assert len(ipa_tier.intervals) == 2
+    assert ipa_tier.intervals[0].text == "həloʊ"
+    assert ipa_tier.intervals[0].start_time == 0
+    assert ipa_tier.intervals[0].end_time == 2.5
+    assert ipa_tier.intervals[1].text == "wɜrld"
+    assert ipa_tier.intervals[1].start_time == 2.5
+    assert ipa_tier.intervals[1].end_time == 5.0
+
+    # Check phone tier is empty (no chunks from either interval)
+    phone_tier = result.text_grid.get_tier_by_name("phones")
+    assert len(phone_tier.intervals) == 0
+
+    # Prediction was attempted twice
     assert mock_pipeline.predict_with_timestamps.call_count == 2

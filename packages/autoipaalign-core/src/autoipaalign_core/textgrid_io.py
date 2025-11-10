@@ -131,24 +131,26 @@ class TextGridContainer:
             logger.warning(warning)
 
     @staticmethod
-    def _create_interval_tier_from_chunks(
-        chunks: list[TranscriptionChunk], tier_name: str, audio_duration: float
-    ) -> tgt.core.IntervalTier:
+    def _create_interval_tier_from_chunks(chunks: list[TranscriptionChunk], tier_name: str) -> tgt.core.IntervalTier:
         """Create an IntervalTier from character-level transcription chunks.
 
         Args:
             chunks: List of TranscriptionChunk objects with text and timestamps.
             tier_name: Name for the created tier.
-            audio_duration: Total duration of the audio file (for tier end time).
 
         Returns:
             A tgt.core.IntervalTier containing intervals for each chunk.
         """
-        phone_tier = tgt.core.IntervalTier(start_time=0, end_time=audio_duration, name=tier_name)
+        max_end = -1
+        phone_tier = tgt.core.IntervalTier(start_time=0, name=tier_name)
         for chunk in chunks:
             start, end = chunk.timestamp
             interval = tgt.core.Interval(start, end, chunk.text)
             phone_tier.add_annotation(interval)
+            if max_end < end:
+                max_end = end
+
+        phone_tier.end_time = max_end
         return phone_tier
 
     @classmethod
@@ -191,37 +193,32 @@ class TextGridContainer:
         if audio_in is None:
             return cls(text_grid=tgt.core.TextGrid())
 
-        if not add_phones:
-            # Simple transcription without timestamps
-            try:
-                transcription = asr_pipeline.predict(audio_in)
-            except Exception as e:
-                logger.warning("Error during transcription of %s: %s", audio_in, e)
-                transcription = f"[Error]: {e}"
-            return cls.from_audio_and_transcription(audio_in, textgrid_tier_name, transcription)
+        chunks = []
+        transcription = ""
 
-        # Transcription with phone alignments
         try:
-            result = asr_pipeline.predict_with_timestamps(audio_in)
+            if add_phones:
+                result = asr_pipeline.predict_with_timestamps(audio_in)
+                transcription = result.text
+                chunks = result.chunks
+            else:
+                transcription = asr_pipeline.predict(audio_in)
         except Exception as e:
-            logger.warning("Error during transcription with timestamps of %s: %s", audio_in, e)
-            # Fall back to creating a simple error TextGrid
-            return cls.from_audio_and_transcription(audio_in, textgrid_tier_name, f"[Error]: {e}")
+            transcription = f"[Error]: {e}"
+            logger.warning("Error during transcription of %s: %s", audio_in, e)
 
+        # Create transcription tier full audio duration
         duration = librosa.get_duration(path=audio_in, sr=None)
-
-        # Create transcription tier with full text
-        transcription_interval = tgt.core.Interval(0, duration, result.text)
+        transcription_interval = tgt.core.Interval(0, duration, transcription)
         transcription_tier = tgt.core.IntervalTier(start_time=0, end_time=duration, name=textgrid_tier_name)
         transcription_tier.add_annotation(transcription_interval)
-
-        # Create phone tier with character-level intervals
-        phone_tier = cls._create_interval_tier_from_chunks(result.chunks, phone_tier_name, duration)
-
-        # Add both tiers to TextGrid
         textgrid = tgt.core.TextGrid()
         textgrid.add_tier(transcription_tier)
-        textgrid.add_tier(phone_tier)
+
+        # Create phone tier with character-level intervals
+        if add_phones:
+            phone_tier = cls._create_interval_tier_from_chunks(chunks, phone_tier_name)
+            textgrid.add_tier(phone_tier)
 
         return cls(text_grid=textgrid)
 
@@ -324,7 +321,7 @@ class TextGridContainer:
                 ipa_tier.add_annotation(tgt.core.Interval(start, end, prediction))
             except RuntimeError as e:
                 logger.warning(
-                    "Interval is likely too short to transcribe and will be left blank. RuntimeError during transcription of interval %s in %s: %s",
+                    "Interval is likely too short to transcribe and will be excluded. RuntimeError during transcription of interval %s in %s: %s",
                     i,
                     audio_in,
                     e,
@@ -342,9 +339,8 @@ class TextGridContainer:
 
         # Add phone alignment if desired
         if add_phones:
-            audio_duration = librosa.get_duration(path=audio_in, sr=None)
             # Create phone tier from all accumulated chunks
-            phone_tier = cls._create_interval_tier_from_chunks(all_phone_chunks, phone_tier_name, audio_duration)
+            phone_tier = cls._create_interval_tier_from_chunks(all_phone_chunks, phone_tier_name)
             source_tg.add_tier(phone_tier)
 
         return cls(text_grid=source_tg)
