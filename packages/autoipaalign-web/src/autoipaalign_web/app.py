@@ -16,6 +16,8 @@ TEXTGRID_NAME_INPUT_LABEL = "TextGrid file name"
 # Selection of models
 VALID_MODELS = [
     "ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns",
+    "excalibur12/wav2vec2-large-lv60_phoneme-timit_english_timit-4k",
+    "excalibur12/wav2vec2-large-lv60_phoneme-timit_english_timit-4k_simplified",
     "ginic/full_dataset_train_1_wav2vec2-large-xlsr-53-buckeye-ipa",
     "ginic/full_dataset_train_2_wav2vec2-large-xlsr-53-buckeye-ipa",
     "ginic/full_dataset_train_3_wav2vec2-large-xlsr-53-buckeye-ipa",
