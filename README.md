@@ -80,13 +80,25 @@ uv pip install -e "packages/autoipaalign-compare[whisper]"
 
 ```bash
 # Transcribe a single audio file
-autoipaalign transcribe-single audio.wav --model-name ginic/full_dataset_train_3_wav2vec2-large-xlsr-53-buckeye-ipa
+autoipaalign transcribe --audio-paths audio.wav --output-target output/
 
-# Transcribe multiple files
-autoipaalign transcribe-batch audio1.wav audio2.wav --output-dir output/
+# Transcribe multiple files to a directory
+autoipaalign transcribe --audio-paths audio1.wav audio2.wav --output-target output/
+
+# Transcribe multiple files to a zip file
+autoipaalign transcribe --audio-paths audio1.wav audio2.wav --output-target output.zip --zipped
+
+# Transcribe with phone alignment tier
+autoipaalign transcribe --audio-paths audio.wav --output-target output/ --output.enable-phones
 
 # Transcribe intervals from existing TextGrid
-autoipaalign transcribe-intervals audio.wav existing.TextGrid --source-tier words --target-tier IPA
+autoipaalign transcribe-intervals --audio-path audio.wav --textgrid-path existing.TextGrid --source-tier words --output-target output/
+
+# Transcribe intervals with phone alignment tier
+autoipaalign transcribe-intervals --audio-path audio.wav --textgrid-path existing.TextGrid --source-tier words --output-target output/ --output.enable-phones
+
+# Use a custom model
+autoipaalign transcribe --audio-paths audio.wav --output-target output/ --asr.model-name ginic/full_dataset_train_1_wav2vec2-large-xlsr-53-buckeye-ipa
 ```
 
 ### Web Interface
