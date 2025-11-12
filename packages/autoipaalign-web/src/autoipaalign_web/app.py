@@ -13,6 +13,39 @@ DEFAULT_MODEL = "ginic/full_dataset_train_3_wav2vec2-large-xlsr-53-buckeye-ipa"
 TEXTGRID_DOWNLOAD_TEXT = "Download TextGrid file"
 TEXTGRID_NAME_INPUT_LABEL = "TextGrid file name"
 
+TITLE = "AutoIPA: Automated IPA transcription"
+
+INTRO_BLOCK = f"""# {TITLE}
+Experiment with producing phonetic transcriptions of uploaded or recorded audio using Wav2Vec2.0-based automatic
+speech recognition (ASR) models!
+
+The AutoIPA project is a collaboration between Virginia Partridge of the UMass Center for Data Science and Artificial
+Intelligence and Joe Pater of UMass Linguistics. Its goal is to make automated IPA transcription more useful
+to linguists (and others!).
+Our first step was to fine-tune a Wav2Vec 2.0 model on the Buckeye corpus, which you can try out here.
+Our next steps will be to extend our work to other varieties of English and other languages.
+Please reach out to us if you have any questions or comments about our work or have related work to share!
+More details are on our [project website](https://websites.umass.edu/comphon/autoipa-automated-ipa-transcription/).
+
+If you use our software, please cite our AMP paper:
+Partridge, Virginia, Joe Pater, Parth Bhangla, Ali Nirheche and Brandon Prickett. 2025/to appear. [AI-assisted analysis of phonological variation in English](https://docs.google.com/presentation/d/1IJrfokvX5T_fKkiFXmcYEgRI2ZRwgFU4zU1tNC-iYl0/edit?usp=sharing). Special session on Deep Phonology, AMP 2025, UC Berkeley. To appear in the Proceedings of AMP 2025.
+"""
+UMASS_MAROON = gr.themes.Color(
+    c50="#f8e8eb",
+    c100="#eec6cc",
+    c200="#d39092",
+    c300="#c06769",
+    c400="#c44849",
+    c500="#c43732",
+    c600="#b63030",
+    c700="#a5282b",
+    c800="#982325",
+    c900="#811c1c",
+    c950="#811c1c",
+)
+THEME = gr.themes.Default(primary_hue=UMASS_MAROON)
+
+
 # Selection of models
 VALID_MODELS = [
     "ctaguchi/wav2vec2-large-xlsr-japlmthufielta-ipa1000-ns",
@@ -188,10 +221,8 @@ def launch_demo():
         "model_name": DEFAULT_MODEL,
     }
 
-    with gr.Blocks() as demo:
-        gr.Markdown("""# Automatic International Phonetic Alphabet Transcription
-This demo allows you to experiment with producing phonetic transcriptions of uploaded or recorded audio using a selected automatic speech recognition (ASR) model.\n
-If you're unsure which model to use, the default `ginic/full_dataset_train_3_wav2vec2-large-xlsr-53-buckeye-ipa` should give good performance.""")
+    with gr.Blocks(title=TITLE, theme=THEME) as demo:
+        gr.Markdown(INTRO_BLOCK)
 
         # Dropdown for model selection
         model_name = gr.Dropdown(
