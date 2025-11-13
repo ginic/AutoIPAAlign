@@ -11,8 +11,8 @@ resolution-markers = [
 [manifest]
 members = [
     "autoipaalign",
-    "autoipaalign-core",
     "autoipaalign-compare",
+    "autoipaalign-core",
     "autoipaalign-web",
 ]
 
@@ -150,6 +150,46 @@ wheels = [
 name = "autoipaalign"
 version = "0.1.0"
 source = { virtual = "." }
+dependencies = [
+    { name = "autoipaalign-compare" },
+    { name = "autoipaalign-core" },
+    { name = "autoipaalign-web" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "autoipaalign-compare", editable = "packages/autoipaalign-compare" },
+    { name = "autoipaalign-core", editable = "packages/autoipaalign-core" },
+    { name = "autoipaalign-web", editable = "packages/autoipaalign-web" },
+]
+
+[[package]]
+name = "autoipaalign-compare"
+version = "0.1.0"
+source = { editable = "packages/autoipaalign-compare" }
+dependencies = [
+    { name = "autoipaalign-core" },
+    { name = "tgt" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "ruff" },
+]
+whisper = [
+    { name = "openai-whisper" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "autoipaalign-core", editable = "packages/autoipaalign-core" },
+    { name = "openai-whisper", marker = "extra == 'whisper'" },
+    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "ruff", marker = "extra == 'dev'" },
+    { name = "tgt" },
+]
+provides-extras = ["whisper", "dev"]
 
 [[package]]
 name = "autoipaalign-core"
@@ -190,34 +230,6 @@ provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest-datadir", specifier = ">=1.8.0" }]
-
-[[package]]
-name = "autoipaalign-compare"
-version = "0.1.0"
-source = { editable = "packages/autoipaalign-compare" }
-dependencies = [
-    { name = "autoipaalign-core" },
-    { name = "tgt" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "ruff" },
-]
-whisper = [
-    { name = "openai-whisper" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "autoipaalign-core", editable = "packages/autoipaalign-core" },
-    { name = "openai-whisper", marker = "extra == 'whisper'" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "ruff", marker = "extra == 'dev'" },
-    { name = "tgt" },
-]
-provides-extras = ["whisper", "dev"]
 
 [[package]]
 name = "autoipaalign-web"

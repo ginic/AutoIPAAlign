@@ -56,24 +56,6 @@ This is a UV workspace containing multiple packages:
    uv sync --all-packages --all-extras
    ```
 
-### Installing Individual Packages
-
-You can install specific packages as needed:
-
-```bash
-# CLI tool only
-uv pip install -e packages/autoipaalign-core
-
-# With comparison tools
-uv pip install -e packages/autoipaalign-compare
-
-# With web interface
-uv pip install -e packages/autoipaalign-web
-
-# With optional Whisper support for comparisons
-uv pip install -e "packages/autoipaalign-compare[whisper]"
-```
-
 ## Usage
 
 ### Command-Line Interface

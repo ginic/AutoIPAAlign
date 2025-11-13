@@ -4,6 +4,13 @@ version = "0.1.0"
 description = "Automatic IPA alignment workspace with CLI, comparison tools, and web interface"
 requires-python = ">=3.9"
 readme = "README.md"
+dependencies = ["autoipaalign-core", "autoipaalign-web", "autoipaalign-compare"]
+
+
+[tool.uv.sources]
+autoipaalign-core = { workspace = true }
+autoipaalign-web = { workspace = true }
+autoipaalign-compare = { workspace = true }
 
 [tool.uv.workspace]
 members = ["packages/*"]
