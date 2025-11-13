@@ -79,18 +79,18 @@ VALID_MODELS = [
 ]
 
 
-def load_model_and_predict(
+def load_model_and_predict_full_audio(
     model_name: str,
     audio_in: str,
     model_state: dict,
+    tier_name: str,
+    add_phones: bool,
+    phone_tier_name: str,
 ):
+    """Load model and predict transcription for full audio with optional phone alignments."""
     try:
         if audio_in is None:
-            return (
-                "",
-                model_state,
-                gr.Textbox(label=TEXTGRID_NAME_INPUT_LABEL, interactive=False),
-            )
+            return "", "", model_state
 
         if model_state["model_name"] != model_name:
             model_state = {
@@ -98,23 +98,22 @@ def load_model_and_predict(
                 "model_name": model_name,
             }
 
-        prediction = model_state["asr_pipeline"].predict(audio_in)
-        return prediction, model_state
+        # Use TextGridContainer to create TextGrid with optional phone alignments
+        tg_container = TextGridContainer.from_audio_with_predict_transcription(
+            audio_in, tier_name, model_state["asr_pipeline"], add_phones=add_phones, phone_tier_name=phone_tier_name
+        )
+
+        # Extract the transcription text from the first tier for display
+        transcription_tier = tg_container.text_grid.get_tier_by_name(tier_name)
+        prediction = transcription_tier.intervals[0].text if transcription_tier.intervals else ""
+
+        textgrid_contents = tg_container.export_to_long_textgrid_str()
+
+        return prediction, textgrid_contents, model_state
     except Exception as e:
         raise gr.Error(f"Failed to load model: {str(e)}")
 
 
-def get_textgrid_contents(audio_in, textgrid_tier_name, transcription_prediction):
-    if audio_in is None or transcription_prediction is None:
-        return ""
-
-    tg_container = TextGridContainer.from_audio_and_transcription(
-        audio_in, textgrid_tier_name, transcription_prediction
-    )
-    return tg_container.export_to_long_textgrid_str()
-
-
-# TODO replace with TextGridContainer.write_textgrid()
 def write_textgrid(textgrid_contents, textgrid_filename):
     """Writes the text grid contents to a named file in the temporary directory.
     Returns the path for download.
@@ -133,7 +132,9 @@ def get_interactive_download_button(textgrid_contents, textgrid_filename):
     )
 
 
-def transcribe_intervals(model_name, audio_in, textgrid_path, source_tier, target_tier, model_state):
+def transcribe_intervals(
+    model_name, audio_in, textgrid_path, source_tier, target_tier, model_state, add_phones, phone_tier_name
+):
     if audio_in is None or textgrid_path is None:
         return "Missing audio or TextGrid input file.", model_state
 
@@ -148,7 +149,13 @@ def transcribe_intervals(model_name, audio_in, textgrid_path, source_tier, targe
     asr_pipeline = model_state["asr_pipeline"]
 
     tg_container = TextGridContainer.from_textgrid_with_predict_intervals(
-        audio_in, Path(textgrid_path.name), source_tier, target_tier, asr_pipeline
+        audio_in,
+        Path(textgrid_path.name),
+        source_tier,
+        target_tier,
+        asr_pipeline,
+        add_phones=add_phones,
+        phone_tier_name=phone_tier_name,
     )
 
     return tg_container.export_to_long_textgrid_str(), model_state
@@ -178,7 +185,7 @@ def validate_textgrid_for_intervals(audio_path, textgrid_file):
         raise gr.Error(f"Invalid TextGrid or audio file:\n{str(e)}")
 
 
-def transcribe_multiple_files(model_name, audio_files, model_state, tier_name):
+def transcribe_multiple_files(model_name, audio_files, model_state, tier_name, add_phones, phone_tier_name):
     try:
         if not audio_files:
             return [], None, model_state
@@ -195,11 +202,14 @@ def transcribe_multiple_files(model_name, audio_files, model_state, tier_name):
         audio_paths = []
 
         for file in audio_files:
-            # Use ASRPipeline for prediction (consistent with CLI)
-            prediction = model_state["asr_pipeline"].predict(file)
+            # Use TextGridContainer to create TextGrid with optional phone alignments
+            tg_container = TextGridContainer.from_audio_with_predict_transcription(
+                file, tier_name, model_state["asr_pipeline"], add_phones=add_phones, phone_tier_name=phone_tier_name
+            )
 
-            # Use TextGridContainer to create TextGrid (modular, consistent with CLI)
-            tg_container = TextGridContainer.from_audio_and_transcription(file, tier_name, prediction)
+            # Extract transcription for table display
+            transcription_tier = tg_container.text_grid.get_tier_by_name(tier_name)
+            prediction = transcription_tier.intervals[0].text if transcription_tier.intervals else ""
 
             table_data.append([Path(file).name, prediction])
             text_grids.append(tg_container)
@@ -240,6 +250,8 @@ def launch_demo():
             interactive=True,
         )
 
+        phone_aligned = gr.Checkbox(label="Add forced-alignments for predictions in their own TextGrid")
+
         model_state = gr.State(value=initial_model)
 
         # Full audio transcription section
@@ -248,16 +260,27 @@ def launch_demo():
             full_transcribe_btn = gr.Button("Transcribe Full Audio", interactive=False, variant="primary")
             full_prediction = gr.Textbox(label="IPA Transcription", show_copy_button=True)
 
-            full_textgrid_tier = gr.Textbox(label="TextGrid Tier Name", value="IPA", interactive=True)
+            full_textgrid_tier = gr.Textbox(
+                label="TextGrid Tier Name", value="IPA", interactive=True, placeholder="ipaTier"
+            )
+
+            full_alignment_tier = gr.Textbox(
+                label="TextGrid Tier for Phone Alignments", value="phones", interactive=False, placeholder="phoneTier"
+            )
 
             full_textgrid_contents = gr.Textbox(label="TextGrid Contents", show_copy_button=True)
+
             full_download_btn = gr.DownloadButton(label=TEXTGRID_DOWNLOAD_TEXT, interactive=False, variant="primary")
             full_reset_btn = gr.Button("Reset", variant="secondary")
 
         # Multiple full audio transcription section
         with gr.Column(visible=False) as multiple_full_audio_section:
             multiple_full_audio = gr.File(file_types=[".wav"], label="Upload Audio File(s)", file_count="multiple")
-            multiple_full_textgrid_tier = gr.Textbox(label="TextGrid Tier Name", value="IPA")
+            multiple_full_textgrid_tier = gr.Textbox(label="TextGrid Tier Name", value="IPA", placeholder="ipaTier")
+            multiple_alignment_tier = gr.Textbox(
+                label="TextGrid Tier for Phone Alignments", value="phones", interactive=False, placeholder="phoneTier"
+            )
+
             multiple_full_transcribe_btn = gr.Button("Transcribe Audio Files", interactive=False, variant="primary")
 
             multiple_full_table = gr.Dataframe(
@@ -275,10 +298,14 @@ def launch_demo():
             interval_audio = gr.Audio(type="filepath", show_download_button=True, label="Upload Audio File")
             interval_textgrid_file = gr.File(file_types=["text", ".TextGrid"], label="Upload TextGrid File")
             tier_names = gr.Dropdown(label="Source Tier (existing)", choices=[], interactive=True)
-            target_tier = gr.Textbox(label="Target Tier (new)", value="IPATier", placeholder="e.g. IPATier")
+            target_tier = gr.Textbox(label="Target Tier (new)", value="IPATier", placeholder="ipaTier")
+            interval_alignment_tier = gr.Textbox(
+                label="Tier for Phone Alignments (new)", value="phones", interactive=False, placeholder="phoneTier"
+            )
 
             interval_transcribe_btn = gr.Button("Transcribe Intervals", interactive=False, variant="primary")
             interval_result = gr.Textbox(label="IPA Interval Transcription", show_copy_button=True, interactive=False)
+
             interval_download_btn = gr.DownloadButton(
                 label=TEXTGRID_DOWNLOAD_TEXT, interactive=False, variant="primary"
             )
@@ -295,6 +322,17 @@ def launch_demo():
             outputs=[full_audio_section, multiple_full_audio_section, interval_section],
         )
 
+        # Make alignment tier textboxes interactive based on checkbox state
+        phone_aligned.change(
+            fn=lambda checked: (
+                gr.update(interactive=checked),
+                gr.update(interactive=checked),
+                gr.update(interactive=checked),
+            ),
+            inputs=phone_aligned,
+            outputs=[full_alignment_tier, multiple_alignment_tier, interval_alignment_tier],
+        )
+
         # Enable full transcribe button after audio uploaded
         full_audio.change(
             fn=lambda audio: gr.update(interactive=audio is not None),
@@ -304,15 +342,9 @@ def launch_demo():
 
         # Full transcription logic
         full_transcribe_btn.click(
-            fn=load_model_and_predict,
-            inputs=[model_name, full_audio, model_state],
-            outputs=[full_prediction, model_state],
-        )
-
-        full_prediction.change(
-            fn=get_textgrid_contents,
-            inputs=[full_audio, full_textgrid_tier, full_prediction],
-            outputs=[full_textgrid_contents],
+            fn=load_model_and_predict_full_audio,
+            inputs=[model_name, full_audio, model_state, full_textgrid_tier, phone_aligned, full_alignment_tier],
+            outputs=[full_prediction, full_textgrid_contents, model_state],
         )
 
         full_textgrid_contents.change(
@@ -350,7 +382,16 @@ def launch_demo():
 
         interval_transcribe_btn.click(
             fn=transcribe_intervals,
-            inputs=[model_name, interval_audio, interval_textgrid_file, tier_names, target_tier, model_state],
+            inputs=[
+                model_name,
+                interval_audio,
+                interval_textgrid_file,
+                tier_names,
+                target_tier,
+                model_state,
+                phone_aligned,
+                interval_alignment_tier,
+            ],
             outputs=[interval_result, model_state],
         )
 
@@ -384,7 +425,14 @@ def launch_demo():
 
         multiple_full_transcribe_btn.click(
             fn=transcribe_multiple_files,
-            inputs=[model_name, multiple_full_audio, model_state, multiple_full_textgrid_tier],
+            inputs=[
+                model_name,
+                multiple_full_audio,
+                model_state,
+                multiple_full_textgrid_tier,
+                phone_aligned,
+                multiple_alignment_tier,
+            ],
             outputs=[multiple_full_table, multiple_full_zip_download_btn, model_state],
         )
 
