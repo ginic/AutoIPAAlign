@@ -2,7 +2,7 @@
 name = "autoipaalign"
 version = "0.1.0"
 description = "Automatic IPA alignment workspace with CLI, comparison tools, and web interface"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 readme = "README.md"
 dependencies = ["autoipaalign-core", "autoipaalign-web", "autoipaalign-compare"]
 
