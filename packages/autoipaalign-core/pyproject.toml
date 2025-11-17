@@ -14,19 +14,19 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "pytest-datadir>=1.8.0",
     "pytest-mock",
     "ruff",
+
 ]
 
 [project.scripts]
 autoipaalign = "autoipaalign_core.cli:main"
 
+[tool.ruff]
+extend-exclude = ["tests/smoke_test.py"]
+
 
 [build-system]
 requires = ["uv_build>=0.8.22,<0.10.0"]
 build-backend = "uv_build"
-
-[dependency-groups]
-dev = [
-    "pytest-datadir>=1.8.0",
-]
