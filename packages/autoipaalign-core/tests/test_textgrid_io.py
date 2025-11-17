@@ -202,9 +202,7 @@ def test_write_textgrids_to_target_no_overwrite(sample_textgrid, tmp_path):
 
     # Should raise error on second write with is_overwrite=False
     with pytest.raises(OSError, match="already exists"):
-        write_textgrids_to_target(
-            audio_paths, text_grids, target, is_zip=True, is_overwrite=False
-        )
+        write_textgrids_to_target(audio_paths, text_grids, target, is_zip=True, is_overwrite=False)
 
 
 def test_create_phone_tier_from_chunks():
@@ -383,9 +381,7 @@ def test_from_audio_with_predict_transcription_error_with_phones(mocker):
     mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.5)
 
     mock_pipeline = mocker.Mock()
-    mock_pipeline.predict_with_timestamps.side_effect = RuntimeError(
-        "Timestamp extraction failed"
-    )
+    mock_pipeline.predict_with_timestamps.side_effect = RuntimeError("Timestamp extraction failed")
 
     result = TextGridContainer.from_audio_with_predict_transcription(
         audio_in="/path/to/audio.wav",
@@ -412,9 +408,7 @@ def test_from_audio_with_predict_transcription_error_with_phones(mocker):
     assert len(phone_tier.intervals) == 0
 
 
-def test_from_textgrid_with_predict_intervals_error_no_phones(
-    mocker, temp_textgrid_file
-):
+def test_from_textgrid_with_predict_intervals_error_no_phones(mocker, temp_textgrid_file):
     """Test error handling during interval transcription when add_phones=False"""
     mock_pipeline = mocker.Mock()
 
@@ -453,9 +447,7 @@ def test_from_textgrid_with_predict_intervals_error_no_phones(
     assert mock_pipeline.predict.call_count == 2
 
 
-def test_from_textgrid_with_predict_intervals_runtime_error_ignored(
-    mocker, temp_textgrid_file
-):
+def test_from_textgrid_with_predict_intervals_runtime_error_ignored(mocker, temp_textgrid_file):
     """Test error handling during interval transcription when add_phones=False"""
     mock_pipeline = mocker.Mock()
 
@@ -482,9 +474,7 @@ def test_from_textgrid_with_predict_intervals_runtime_error_ignored(
     assert mock_pipeline.predict.call_count == 2
 
 
-def test_from_textgrid_with_predict_intervals_error_with_phones(
-    mocker, temp_textgrid_file
-):
+def test_from_textgrid_with_predict_intervals_error_with_phones(mocker, temp_textgrid_file):
     """Test error handling during interval transcription when add_phones=True"""
     mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.0)
 
@@ -531,9 +521,7 @@ def test_from_textgrid_with_predict_intervals_error_with_phones(
 
     # Check phone tier has chunks from successful interval and error from failed interval
     phone_tier = result.text_grid.get_tier_by_name("phones")
-    assert (
-        len(phone_tier.intervals) == 3
-    )  # 2 phones from first interval + 1 error from second
+    assert len(phone_tier.intervals) == 3  # 2 phones from first interval + 1 error from second
 
     # First interval phones (adjusted by 0.0 offset)
     assert phone_tier.intervals[0].text == "h"
@@ -587,9 +575,7 @@ def test_from_audio_with_predict_transcription_empty_phone_chunks(mocker):
     assert len(phone_tier.intervals) == 0
 
 
-def test_from_textgrid_with_predict_intervals_empty_phone_chunks(
-    mocker, temp_textgrid_file
-):
+def test_from_textgrid_with_predict_intervals_empty_phone_chunks(mocker, temp_textgrid_file):
     """Test handling when predict_with_timestamps returns empty chunks during interval transcription"""
     mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.0)
 

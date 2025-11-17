@@ -63,9 +63,7 @@ def load_audio(
     if interval:
         logger.debug("Loading interval %s from audio %s", interval, audio_path)
         start, end = interval
-        y, sr = librosa.load(
-            audio_path, sr=sampling_rate, offset=start, duration=end - start
-        )
+        y, sr = librosa.load(audio_path, sr=sampling_rate, offset=start, duration=end - start)
     else:
         logger.debug("Loading audio %s", audio_path)
         y, sr = librosa.load(audio_path, sr=sampling_rate)
@@ -108,9 +106,7 @@ class ASRPipeline:
             Transcription text
         """
         y = load_audio(audio_path, self.sampling_rate, interval)
-        logger.debug(
-            "Predicting transcription for %s with model %s", audio_path, self.model_name
-        )
+        logger.debug("Predicting transcription for %s with model %s", audio_path, self.model_name)
         transcription = self._model_pipe(y)["text"]
         return transcription
 
@@ -141,9 +137,7 @@ class ASRPipeline:
         for c in result.get("chunks", []):
             # chunk timestamp as np.float
             timestamp = c["timestamp"]
-            chunk = TranscriptionChunk(
-                text=c["text"], timestamp=(timestamp[0].item(), timestamp[1].item())
-            )
+            chunk = TranscriptionChunk(text=c["text"], timestamp=(timestamp[0].item(), timestamp[1].item()))
             chunks.append(chunk)
 
         return TranscriptionWithTimestamps(text=result["text"], chunks=chunks)

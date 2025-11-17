@@ -53,9 +53,7 @@ def write_textgrids_to_target(
 
         with zipfile.ZipFile(target_path, "w") as zipf:
             for i, (audio_path, tg) in enumerate(zip(audio_paths, text_grids), start=1):
-                zipf.writestr(
-                    to_textgrid_basename(audio_path), tg.export_to_long_textgrid_str()
-                )
+                zipf.writestr(to_textgrid_basename(audio_path), tg.export_to_long_textgrid_str())
                 if i % 10 == 0:
                     logger.info("%s TextGrids written to zip", i)
     else:
@@ -99,9 +97,7 @@ class TextGridContainer:
         """
         return self.text_grid.get_tier_names()
 
-    def write_textgrid(
-        self, directory: Path, filename: Path, is_overwrite: bool = True
-    ) -> Path:
+    def write_textgrid(self, directory: Path, filename: Path, is_overwrite: bool = True) -> Path:
         """Write the TextGrid to a file in the specified directory using hte same
 
         Args:
@@ -116,24 +112,18 @@ class TextGridContainer:
         textgrid_path = Path(directory) / to_textgrid_basename(filename)
 
         if not is_overwrite and textgrid_path.exists():
-            raise OSError(
-                f"File {textgrid_path} already exists and cannot be overwritten"
-            )
+            raise OSError(f"File {textgrid_path} already exists and cannot be overwritten")
 
         logger.debug("Writing TextGrid to %s", textgrid_path)
         textgrid_path.write_text(self.export_to_long_textgrid_str())
         logger.debug("TextGrid %s written", textgrid_path)
         return textgrid_path
 
-    def validate_against_audio_duration(
-        self, audio_path: str | os.PathLike[str], time_difference=0.01
-    ):
+    def validate_against_audio_duration(self, audio_path: str | os.PathLike[str], time_difference=0.01):
         audio_duration = librosa.get_duration(path=audio_path, sr=None)
         tg_end_time = max(tier.end_time for tier in self.text_grid.tiers)
         if tg_end_time > audio_duration:
-            raise ValueError(
-                "TextGrid ends at {tg_end_time:.2f}s but audio is only {audio_duration:.2f}s."
-            )
+            raise ValueError("TextGrid ends at {tg_end_time:.2f}s but audio is only {audio_duration:.2f}s.")
 
         if abs(tg_end_time - audio_duration) > time_difference:
             warning = f"TextGrid ends at {tg_end_time:.2f}s but audio is {audio_duration:.2f}s. Only the annotated portion will be transcribed."
@@ -141,9 +131,7 @@ class TextGridContainer:
             logger.warning(warning)
 
     @staticmethod
-    def _create_interval_tier_from_chunks(
-        chunks: list[TranscriptionChunk], tier_name: str
-    ) -> tgt.core.IntervalTier:
+    def _create_interval_tier_from_chunks(chunks: list[TranscriptionChunk], tier_name: str) -> tgt.core.IntervalTier:
         """Create an IntervalTier from character-level transcription chunks.
 
         Args:
@@ -222,9 +210,7 @@ class TextGridContainer:
         # Create transcription tier full audio duration
         duration = librosa.get_duration(path=audio_in, sr=None)
         transcription_interval = tgt.core.Interval(0, duration, transcription)
-        transcription_tier = tgt.core.IntervalTier(
-            start_time=0, end_time=duration, name=textgrid_tier_name
-        )
+        transcription_tier = tgt.core.IntervalTier(start_time=0, end_time=duration, name=textgrid_tier_name)
         transcription_tier.add_annotation(transcription_interval)
         textgrid = tgt.core.TextGrid()
         textgrid.add_tier(transcription_tier)
@@ -263,9 +249,7 @@ class TextGridContainer:
         duration = librosa.get_duration(path=audio_in, sr=None)
 
         annotation = tgt.core.Interval(0, duration, transcription)
-        transcription_tier = tgt.core.IntervalTier(
-            start_time=0, end_time=duration, name=textgrid_tier_name
-        )
+        transcription_tier = tgt.core.IntervalTier(start_time=0, end_time=duration, name=textgrid_tier_name)
         transcription_tier.add_annotation(annotation)
         textgrid = tgt.core.TextGrid()
         textgrid.add_tier(transcription_tier)
@@ -324,9 +308,7 @@ class TextGridContainer:
             start, end = interval.start_time, interval.end_time
             try:
                 if add_phones:
-                    transcription_with_timestamps = (
-                        asr_pipeline.predict_with_timestamps(audio_in, (start, end))
-                    )
+                    transcription_with_timestamps = asr_pipeline.predict_with_timestamps(audio_in, (start, end))
                     prediction = transcription_with_timestamps.text
 
                     for chunk in transcription_with_timestamps.chunks:
@@ -359,9 +341,7 @@ class TextGridContainer:
                 error_message = f"[Error]: {e}"
                 ipa_tier.add_annotation(tgt.core.Interval(start, end, error_message))
                 if add_phones:
-                    all_phone_chunks.append(
-                        TranscriptionChunk(error_message, (start, end))
-                    )
+                    all_phone_chunks.append(TranscriptionChunk(error_message, (start, end)))
 
         # Add interval tier
         source_tg.add_tier(ipa_tier)
@@ -369,9 +349,7 @@ class TextGridContainer:
         # Add phone alignment if desired
         if add_phones:
             # Create phone tier from all accumulated chunks
-            phone_tier = cls._create_interval_tier_from_chunks(
-                all_phone_chunks, phone_tier_name
-            )
+            phone_tier = cls._create_interval_tier_from_chunks(all_phone_chunks, phone_tier_name)
             source_tg.add_tier(phone_tier)
 
         return cls(text_grid=source_tg)

@@ -121,9 +121,7 @@ def test_transcribe_intervals_run(mock_asr_pipeline, tmp_path, shared_datadir):
     assert ipa_tier.end_time == 2.273
 
 
-def test_transcribe_intervals_run_error_handling(
-    mock_asr_pipeline, tmp_path, mocker, shared_datadir
-):
+def test_transcribe_intervals_run_error_handling(mock_asr_pipeline, tmp_path, mocker, shared_datadir):
     """Test TranscribeIntervals.run() handles ASR errors gracefully"""
     # Make predict() raise an exception for all calls
     mock_asr_pipeline.predict.side_effect = Exception("Load error")

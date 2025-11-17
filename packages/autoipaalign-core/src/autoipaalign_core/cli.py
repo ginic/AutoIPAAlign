@@ -150,9 +150,7 @@ class TranscribeIntervals:
 
 def main():
     """Main entry point for the CLI."""
-    logging.basicConfig(
-        level=logging.INFO, format="%(name)s : %(levelname)s : %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(name)s : %(levelname)s : %(message)s")
     cli = tyro.cli(Transcribe | TranscribeIntervals)
     try:
         cli.run()
