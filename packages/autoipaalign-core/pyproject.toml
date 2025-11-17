@@ -2,7 +2,7 @@
 name = "autoipaalign-core"
 version = "0.1.0"
 description = "Core library and CLI for automatic IPA transcription and forced alignment"
-requires-python = ">=3.9"
+requires-python = ">=3.9,<3.14"
 dependencies = [
     "transformers[torch]",
     "librosa",
