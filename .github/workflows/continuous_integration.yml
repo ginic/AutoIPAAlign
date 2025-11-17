@@ -1,0 +1,43 @@
+name: Python package
+
+on:
+  pull_request:
+  push:
+    branches: [ $default-branch ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install packages and dependencies
+        run: uv sync --locked --all-packages --all-extras
+
+      - name: Test with pytest
+        run: uv run pytest
+
+  lint_and_format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/ruff-action@v3
+        with:
+          version: ">=0.14.1"
+      - name: Lint with ruff
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          ruff check . --select=E9,F63,F7,F82 --diff
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide.
+          ruff check . --exit-zero --statistics
+      - name: Format checks with ruff
+        run: ruff format --diff
