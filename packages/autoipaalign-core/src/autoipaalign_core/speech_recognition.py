@@ -45,7 +45,11 @@ class TranscriptionWithTimestamps:
     """List of individual characters/phones with their timestamps."""
 
 
-def load_audio(audio_path: str | os.PathLike[str], sampling_rate: int, interval: tuple[float, float] | None = None):
+def load_audio(
+    audio_path: str | os.PathLike[str],
+    sampling_rate: int,
+    interval: tuple[float, float] | None = None,
+):
     """Load audio file with optional interval extraction.
 
     Args:
@@ -59,7 +63,9 @@ def load_audio(audio_path: str | os.PathLike[str], sampling_rate: int, interval:
     if interval:
         logger.debug("Loading interval %s from audio %s", interval, audio_path)
         start, end = interval
-        y, sr = librosa.load(audio_path, sr=sampling_rate, offset=start, duration=end - start)
+        y, sr = librosa.load(
+            audio_path, sr=sampling_rate, offset=start, duration=end - start
+        )
     else:
         logger.debug("Loading audio %s", audio_path)
         y, sr = librosa.load(audio_path, sr=sampling_rate)
@@ -87,7 +93,11 @@ class ASRPipeline:
             "automatic-speech-recognition", model=self.model_name, device=self.device
         )
 
-    def predict(self, audio_path: str | os.PathLike[str], interval: tuple[float, float] | None = None) -> str:
+    def predict(
+        self,
+        audio_path: str | os.PathLike[str],
+        interval: tuple[float, float] | None = None,
+    ) -> str:
         """Predict transcription for an audio file.
 
         Args:
@@ -98,12 +108,16 @@ class ASRPipeline:
             Transcription text
         """
         y = load_audio(audio_path, self.sampling_rate, interval)
-        logger.debug("Predicting transcription for %s with model %s", audio_path, self.model_name)
+        logger.debug(
+            "Predicting transcription for %s with model %s", audio_path, self.model_name
+        )
         transcription = self._model_pipe(y)["text"]
         return transcription
 
     def predict_with_timestamps(
-        self, audio_path: str | os.PathLike[str], interval: tuple[float, float] | None = None
+        self,
+        audio_path: str | os.PathLike[str],
+        interval: tuple[float, float] | None = None,
     ) -> TranscriptionWithTimestamps:
         """Predict transcription with character-level timestamps for an audio file.
 
@@ -115,7 +129,11 @@ class ASRPipeline:
             TranscriptionWithTimestamps containing full text and character-level chunks
         """
         y = load_audio(audio_path, self.sampling_rate, interval)
-        logger.debug("Predicting transcription with timestamps for %s with model %s", audio_path, self.model_name)
+        logger.debug(
+            "Predicting transcription with timestamps for %s with model %s",
+            audio_path,
+            self.model_name,
+        )
         result = self._model_pipe(y, return_timestamps="char")
 
         # Collect TranscriptionChunk objects
@@ -123,7 +141,9 @@ class ASRPipeline:
         for c in result.get("chunks", []):
             # chunk timestamp as np.float
             timestamp = c["timestamp"]
-            chunk = TranscriptionChunk(text=c["text"], timestamp=(timestamp[0].item(), timestamp[1].item()))
+            chunk = TranscriptionChunk(
+                text=c["text"], timestamp=(timestamp[0].item(), timestamp[1].item())
+            )
             chunks.append(chunk)
 
         return TranscriptionWithTimestamps(text=result["text"], chunks=chunks)

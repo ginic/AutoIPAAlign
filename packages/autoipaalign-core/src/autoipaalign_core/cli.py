@@ -62,14 +62,21 @@ class Transcribe:
         """Transcribe and write files."""
         if self.output_target.exists():
             if self.output.overwrite:
-                logger.warning("Target %s already exists and may be overwritten.", self.output_target)
+                logger.warning(
+                    "Target %s already exists and may be overwritten.",
+                    self.output_target,
+                )
             else:
                 logger.warning(
                     "Target %s already exists, but cannot be overwritten. Transcriptions may not be saved.",
                     self.output_target,
                 )
 
-        logger.info("Transcribing  %s files with model %s.", len(self.audio_paths), self.asr.model_name)
+        logger.info(
+            "Transcribing  %s files with model %s.",
+            len(self.audio_paths),
+            self.asr.model_name,
+        )
 
         text_grids = []
 
@@ -83,7 +90,13 @@ class Transcribe:
             )
             text_grids.append(tg)
 
-        write_textgrids_to_target(self.audio_paths, text_grids, self.output_target, self.zipped, self.output.overwrite)
+        write_textgrids_to_target(
+            self.audio_paths,
+            text_grids,
+            self.output_target,
+            self.zipped,
+            self.output.overwrite,
+        )
 
 
 @dataclass
@@ -137,7 +150,9 @@ class TranscribeIntervals:
 
 def main():
     """Main entry point for the CLI."""
-    logging.basicConfig(level=logging.INFO, format="%(name)s : %(levelname)s : %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(name)s : %(levelname)s : %(message)s"
+    )
     cli = tyro.cli(Transcribe | TranscribeIntervals)
     try:
         cli.run()

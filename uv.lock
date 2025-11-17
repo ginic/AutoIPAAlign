@@ -206,19 +206,16 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "pytest" },
+    { name = "pytest-datadir" },
     { name = "pytest-mock" },
     { name = "ruff" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest-datadir" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "librosa" },
     { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pytest-datadir", marker = "extra == 'dev'", specifier = ">=1.8.0" },
     { name = "pytest-mock", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "soundfile" },
@@ -227,9 +224,6 @@ requires-dist = [
     { name = "tyro" },
 ]
 provides-extras = ["dev"]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pytest-datadir", specifier = ">=1.8.0" }]
 
 [[package]]
 name = "autoipaalign-web"

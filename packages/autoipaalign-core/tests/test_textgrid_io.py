@@ -8,7 +8,10 @@ import tgt.core
 import tgt.io3
 
 from autoipaalign_core.textgrid_io import TextGridContainer, write_textgrids_to_target
-from autoipaalign_core.speech_recognition import TranscriptionChunk, TranscriptionWithTimestamps
+from autoipaalign_core.speech_recognition import (
+    TranscriptionChunk,
+    TranscriptionWithTimestamps,
+)
 
 
 @pytest.fixture
@@ -72,7 +75,9 @@ def test_from_audio_and_transcription(mocker):
     mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.5)
 
     result = TextGridContainer.from_audio_and_transcription(
-        audio_in="/path/to/audio.wav", textgrid_tier_name="transcription", transcription="hello world"
+        audio_in="/path/to/audio.wav",
+        textgrid_tier_name="transcription",
+        transcription="hello world",
     )
 
     assert isinstance(result, TextGridContainer)
@@ -92,7 +97,10 @@ def test_from_audio_and_transcription(mocker):
 
 def test_from_textgrid_with_predict_intervals(mocker, temp_textgrid_file):
     """Test creating TextGrid with mock ASR predictions"""
-    mocker.patch("autoipaalign_core.textgrid_io.librosa.load", return_value=([0.1, 0.2, 0.3], 16000))
+    mocker.patch(
+        "autoipaalign_core.textgrid_io.librosa.load",
+        return_value=([0.1, 0.2, 0.3], 16000),
+    )
 
     mock_pipeline = mocker.Mock()
     mock_pipeline.predict.return_value = "həloʊ"
@@ -127,12 +135,17 @@ def test_from_textgrid_with_predict_intervals(mocker, temp_textgrid_file):
 
 
 def test_from_audio_with_predict_transcription(mocker):
-    mocker.patch("autoipaalign_core.textgrid_io.librosa.load", return_value=([0.1, 0.2, 0.3], 16000))
+    mocker.patch(
+        "autoipaalign_core.textgrid_io.librosa.load",
+        return_value=([0.1, 0.2, 0.3], 16000),
+    )
     mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.5)
     mock_pipeline = mocker.Mock()
     mock_pipeline.predict.return_value = "hello"
     tg = TextGridContainer.from_audio_with_predict_transcription(
-        audio_in="/path/to/audio.wav", textgrid_tier_name="transcription", asr_pipeline=mock_pipeline
+        audio_in="/path/to/audio.wav",
+        textgrid_tier_name="transcription",
+        asr_pipeline=mock_pipeline,
     )
 
     assert tg.get_tier_names() == ["transcription"]
@@ -147,7 +160,10 @@ def test_from_audio_with_predict_transcription(mocker):
 def test_write_textgrids_to_directory(sample_textgrid, tmp_path):
     """Test writing TextGrids to directory"""
     audio_paths = [Path("test1.wav"), Path("test2.wav")]
-    text_grids = [TextGridContainer(sample_textgrid), TextGridContainer(sample_textgrid)]
+    text_grids = [
+        TextGridContainer(sample_textgrid),
+        TextGridContainer(sample_textgrid),
+    ]
     target = tmp_path / "output"
 
     write_textgrids_to_target(audio_paths, text_grids, target, is_zip=False)
@@ -160,7 +176,10 @@ def test_write_textgrids_to_directory(sample_textgrid, tmp_path):
 def test_write_textgrids_to_zip(sample_textgrid, tmp_path):
     """Test writing TextGrids to zip file"""
     audio_paths = [Path("test1.wav"), Path("test2.wav")]
-    text_grids = [TextGridContainer(sample_textgrid), TextGridContainer(sample_textgrid)]
+    text_grids = [
+        TextGridContainer(sample_textgrid),
+        TextGridContainer(sample_textgrid),
+    ]
     target = tmp_path / "output.zip"
 
     write_textgrids_to_target(audio_paths, text_grids, target, is_zip=True)
@@ -183,7 +202,9 @@ def test_write_textgrids_to_target_no_overwrite(sample_textgrid, tmp_path):
 
     # Should raise error on second write with is_overwrite=False
     with pytest.raises(OSError, match="already exists"):
-        write_textgrids_to_target(audio_paths, text_grids, target, is_zip=True, is_overwrite=False)
+        write_textgrids_to_target(
+            audio_paths, text_grids, target, is_zip=True, is_overwrite=False
+        )
 
 
 def test_create_phone_tier_from_chunks():
@@ -362,7 +383,9 @@ def test_from_audio_with_predict_transcription_error_with_phones(mocker):
     mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.5)
 
     mock_pipeline = mocker.Mock()
-    mock_pipeline.predict_with_timestamps.side_effect = RuntimeError("Timestamp extraction failed")
+    mock_pipeline.predict_with_timestamps.side_effect = RuntimeError(
+        "Timestamp extraction failed"
+    )
 
     result = TextGridContainer.from_audio_with_predict_transcription(
         audio_in="/path/to/audio.wav",
@@ -389,7 +412,9 @@ def test_from_audio_with_predict_transcription_error_with_phones(mocker):
     assert len(phone_tier.intervals) == 0
 
 
-def test_from_textgrid_with_predict_intervals_error_no_phones(mocker, temp_textgrid_file):
+def test_from_textgrid_with_predict_intervals_error_no_phones(
+    mocker, temp_textgrid_file
+):
     """Test error handling during interval transcription when add_phones=False"""
     mock_pipeline = mocker.Mock()
 
@@ -428,7 +453,9 @@ def test_from_textgrid_with_predict_intervals_error_no_phones(mocker, temp_textg
     assert mock_pipeline.predict.call_count == 2
 
 
-def test_from_textgrid_with_predict_intervals_runtime_error_ignored(mocker, temp_textgrid_file):
+def test_from_textgrid_with_predict_intervals_runtime_error_ignored(
+    mocker, temp_textgrid_file
+):
     """Test error handling during interval transcription when add_phones=False"""
     mock_pipeline = mocker.Mock()
 
@@ -455,7 +482,9 @@ def test_from_textgrid_with_predict_intervals_runtime_error_ignored(mocker, temp
     assert mock_pipeline.predict.call_count == 2
 
 
-def test_from_textgrid_with_predict_intervals_error_with_phones(mocker, temp_textgrid_file):
+def test_from_textgrid_with_predict_intervals_error_with_phones(
+    mocker, temp_textgrid_file
+):
     """Test error handling during interval transcription when add_phones=True"""
     mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.0)
 
@@ -502,7 +531,9 @@ def test_from_textgrid_with_predict_intervals_error_with_phones(mocker, temp_tex
 
     # Check phone tier has chunks from successful interval and error from failed interval
     phone_tier = result.text_grid.get_tier_by_name("phones")
-    assert len(phone_tier.intervals) == 3  # 2 phones from first interval + 1 error from second
+    assert (
+        len(phone_tier.intervals) == 3
+    )  # 2 phones from first interval + 1 error from second
 
     # First interval phones (adjusted by 0.0 offset)
     assert phone_tier.intervals[0].text == "h"
@@ -556,7 +587,9 @@ def test_from_audio_with_predict_transcription_empty_phone_chunks(mocker):
     assert len(phone_tier.intervals) == 0
 
 
-def test_from_textgrid_with_predict_intervals_empty_phone_chunks(mocker, temp_textgrid_file):
+def test_from_textgrid_with_predict_intervals_empty_phone_chunks(
+    mocker, temp_textgrid_file
+):
     """Test handling when predict_with_timestamps returns empty chunks during interval transcription"""
     mocker.patch("autoipaalign_core.textgrid_io.librosa.get_duration", return_value=5.0)
 
