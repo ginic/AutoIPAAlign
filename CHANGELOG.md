@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [v0.1.0] - 2025-11-18
+## [v1.0.0] - 2025-11-18
 
 ### Added
 - Command line interface to transcribe audio with HuggingFace ASR models and export them as TextGrid
