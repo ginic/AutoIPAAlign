@@ -26,7 +26,7 @@ members = ["packages/*"]
 
 [tool.ruff]
 line-length = 120
-extend-exclude = ["tests/smoke_test.py"]
+extend-exclude = ["tests/core_smoke_test.py"]
 
 [build-system]
 requires = ["uv_build>=0.8.22,<0.10.0"]
