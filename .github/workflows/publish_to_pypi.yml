@@ -2,7 +2,6 @@ name: Publish builds on TestPyPI, PyPI and DockerHub
 
 on:
   pull_request:
-    branches: [ $default-branch ]
   push:
     branches: [ $default-branch ]
   release:
