@@ -80,6 +80,7 @@ jobs:
       with:
         repository-url: https://test.pypi.org/legacy/
         skip-existing: true
+        verbose: true
 
   publish-to-dockerhub:
     runs-on: ubuntu-latest
