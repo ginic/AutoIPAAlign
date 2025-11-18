@@ -14,14 +14,11 @@ If you use our software, please cite our AMP paper:
 Partridge, Virginia, Joe Pater, Parth Bhangla, Ali Nirheche and Brandon Prickett. 2025/to appear. [AI-assisted analysis of phonological variation in English](https://docs.google.com/presentation/d/1IJrfokvX5T_fKkiFXmcYEgRI2ZRwgFU4zU1tNC-iYl0/edit?usp=sharing). Special session on Deep Phonology, AMP 2025, UC Berkeley. To appear in the Proceedings of AMP 2025.
 """
 
-## Project Structure
-
-This is project is structured in multiple packages:
-- **autoipaalign.core**: Core library and command-line interface for IPA transcription and forced alignments
-- **autoipaalign_compare**: Tools for comparing alignments across different ASR systems
-- **autoipaalign_web**: Gradio web interface for interactive transcription
-
 ## Basic Usage
+This is project is structured in multiple subpackages based on their different external dependencies:
+- **autoipaalign.core**: Core library and command-line interface for IPA transcription and forced alignments. Always installed.
+- **autoipaalign.compare**: Tools for comparing alignments across different ASR systems, such as whisper and the Montreal Forced Aligner. Install with `pip install autoipaalign[compare]`.
+- **autoipaalign.web**: Gradio web interface for interactive transcription. Install with `pip install autoipaalign[compare]`.
 
 ### Basic Installation
 TODO: Pip install instructions coming soon.
