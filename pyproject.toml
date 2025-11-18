@@ -4,8 +4,17 @@ version = "0.1.0"
 description = "Automatic IPA alignment workspace with CLI, comparison tools, and web interface"
 requires-python = ">=3.10,<3.14"
 readme = "README.md"
-dependencies = ["autoipaalign-core", "autoipaalign-web", "autoipaalign-compare"]
+dependencies = [
+    "autoipaalign-core"
+]
 
+[project.optional-dependencies]
+app = [
+    "autoipaalign-web"
+]
+compare = [
+    "autoipaalign-compare"
+]
 
 [tool.uv.sources]
 autoipaalign-core = { workspace = true }
@@ -18,3 +27,7 @@ members = ["packages/*"]
 [tool.ruff]
 line-length = 120
 extend-exclude = ["tests/smoke_test.py"]
+
+[build-system]
+requires = ["uv_build>=0.8.22,<0.10.0"]
+build-backend = "uv_build"
