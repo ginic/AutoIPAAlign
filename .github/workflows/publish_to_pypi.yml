@@ -90,6 +90,12 @@ jobs:
     environment:
       name: dockerhub
 
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+
     steps:
     - name: Docker meta
       id: meta
