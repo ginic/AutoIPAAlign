@@ -6,8 +6,8 @@ from pathlib import Path
 
 import tyro
 
-from autoipaalign_core.textgrid_io import TextGridContainer, write_textgrids_to_target
-from autoipaalign_core.speech_recognition import ASRPipeline
+from autoipaalign.core.textgrid_io import TextGridContainer, write_textgrids_to_target
+from autoipaalign.core.speech_recognition import ASRPipeline
 
 
 logger = logging.getLogger(__name__)

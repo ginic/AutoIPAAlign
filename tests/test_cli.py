@@ -5,8 +5,8 @@ import zipfile
 import pytest
 import tgt.io3
 
-from autoipaalign_core.cli import Transcribe, TranscribeIntervals, OutputConfig
-from autoipaalign_core.speech_recognition import ASRPipeline
+from autoipaalign.core.cli import Transcribe, TranscribeIntervals, OutputConfig
+from autoipaalign.core.speech_recognition import ASRPipeline
 
 
 @pytest.fixture

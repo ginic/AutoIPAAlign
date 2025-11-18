@@ -16,28 +16,28 @@ from io import StringIO
 
 
 def test_import_package():
-    """Test that the autoipaalign_core package can be imported."""
-    import autoipaalign_core
+    """Test that the autoipaalign.core package can be imported."""
+    import autoipaalign.core
 
 
 def test_import_key_modules():
     """Test that key modules can be imported."""
-    from autoipaalign_core.textgrid_io import TextGridContainer
+    from autoipaalign.core.textgrid_io import TextGridContainer
 
 
 def test_import_cli():
     """Test that the CLI module can be imported."""
-    from autoipaalign_core import cli
+    from autoipaalign.core import cli
 
 
 def test_import_cli_commands():
     """Test that CLI command classes can be imported."""
-    from autoipaalign_core.cli import Transcribe, TranscribeIntervals
+    from autoipaalign.core.cli import Transcribe, TranscribeIntervals
 
 
 def test_cli_main_callable():
     """Test that the CLI main function runs and shows expected error."""
-    from autoipaalign_core.cli import main
+    from autoipaalign.core.cli import main
 
     # Capture stderr
     old_stderr = sys.stderr

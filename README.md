@@ -17,7 +17,7 @@ Partridge, Virginia, Joe Pater, Parth Bhangla, Ali Nirheche and Brandon Prickett
 ## Project Structure
 
 This is project is structured in multiple packages:
-- **autoipaalign_core**: Core library and command-line interface for IPA transcription and forced alignments
+- **autoipaalign.core**: Core library and command-line interface for IPA transcription and forced alignments
 - **autoipaalign_compare**: Tools for comparing alignments across different ASR systems
 - **autoipaalign_web**: Gradio web interface for interactive transcription
 
@@ -73,7 +73,7 @@ This project is structured using [uv workspaces](https://docs.astral.sh/uv/conce
    ```bash
    git clone <repository-url>
    cd autoipaalign
-   uv sync --all-packages --all-extras
+   uv sync --all-extras
    ```
 
 ### External Dependencies

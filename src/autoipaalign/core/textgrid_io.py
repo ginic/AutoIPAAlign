@@ -16,7 +16,7 @@ import librosa
 import tgt.core
 import tgt.io3
 
-from autoipaalign_core.speech_recognition import ASRPipeline, TranscriptionChunk
+from autoipaalign.core.speech_recognition import ASRPipeline, TranscriptionChunk
 
 logger = logging.getLogger(__name__)
 

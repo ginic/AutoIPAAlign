@@ -8,14 +8,6 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 
-[manifest]
-members = [
-    "autoipaalign",
-    "autoipaalign-compare",
-    "autoipaalign-core",
-    "autoipaalign-web",
-]
-
 [[package]]
 name = "accelerate"
 version = "1.11.0"
@@ -135,63 +127,19 @@ name = "autoipaalign"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "autoipaalign-core" },
-]
-
-[package.optional-dependencies]
-app = [
-    { name = "autoipaalign-web" },
-]
-compare = [
-    { name = "autoipaalign-compare" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "autoipaalign-compare", marker = "extra == 'compare'", editable = "packages/autoipaalign-compare" },
-    { name = "autoipaalign-core", editable = "packages/autoipaalign-core" },
-    { name = "autoipaalign-web", marker = "extra == 'app'", editable = "packages/autoipaalign-web" },
-]
-provides-extras = ["app", "compare"]
-
-[[package]]
-name = "autoipaalign-compare"
-version = "0.1.0"
-source = { editable = "packages/autoipaalign-compare" }
-dependencies = [
-    { name = "autoipaalign-core" },
-    { name = "tgt" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "ruff" },
-]
-whisper = [
-    { name = "openai-whisper" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "autoipaalign-core", editable = "packages/autoipaalign-core" },
-    { name = "openai-whisper", marker = "extra == 'whisper'" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "ruff", marker = "extra == 'dev'" },
-    { name = "tgt" },
-]
-provides-extras = ["whisper", "dev"]
-
-[[package]]
-name = "autoipaalign-core"
-version = "0.1.0"
-source = { editable = "packages/autoipaalign-core" }
-dependencies = [
     { name = "librosa" },
     { name = "soundfile" },
     { name = "tgt" },
     { name = "transformers", extra = ["torch"] },
     { name = "tyro" },
+]
+
+[package.optional-dependencies]
+app = [
+    { name = "gradio" },
+]
+compare = [
+    { name = "openai-whisper" },
 ]
 
 [package.dev-dependencies]
@@ -204,12 +152,15 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "gradio", marker = "extra == 'app'", specifier = "==5.29.0" },
     { name = "librosa" },
+    { name = "openai-whisper", marker = "extra == 'compare'" },
     { name = "soundfile" },
     { name = "tgt" },
     { name = "transformers", extras = ["torch"] },
     { name = "tyro" },
 ]
+provides-extras = ["app", "compare"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -217,21 +168,6 @@ dev = [
     { name = "pytest-datadir", specifier = ">=1.8.0" },
     { name = "pytest-mock" },
     { name = "ruff" },
-]
-
-[[package]]
-name = "autoipaalign-web"
-version = "0.1.0"
-source = { editable = "packages/autoipaalign-web" }
-dependencies = [
-    { name = "autoipaalign-core" },
-    { name = "gradio" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "autoipaalign-core", editable = "packages/autoipaalign-core" },
-    { name = "gradio", specifier = "==5.29.0" },
 ]
 
 [[package]]

@@ -13,9 +13,14 @@ RUN uv python install 3.13
 
 WORKDIR /app
 
+# Install dependencies
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-editable
 COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --extra app
+    uv sync --locked --extra app
 
 FROM debian:bookworm-slim
 

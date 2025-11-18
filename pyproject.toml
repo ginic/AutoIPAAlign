@@ -5,24 +5,31 @@ description = "Automatic IPA alignment workspace with CLI, comparison tools, and
 requires-python = ">=3.10,<3.14"
 readme = "README.md"
 dependencies = [
-    "autoipaalign-core"
+    "transformers[torch]",
+    "librosa",
+    "tgt",
+    "soundfile",
+    "tyro",
 ]
 
 [project.optional-dependencies]
 app = [
-    "autoipaalign-web"
+    "gradio==5.29.0",
 ]
 compare = [
-    "autoipaalign-compare"
+    "openai-whisper"
 ]
 
-[tool.uv.sources]
-autoipaalign-core = { workspace = true }
-autoipaalign-web = { workspace = true }
-autoipaalign-compare = { workspace = true }
+[project.scripts]
+autoipaalign = "autoipaalign.core.cli:main"
 
-[tool.uv.workspace]
-members = ["packages/*"]
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-datadir>=1.8.0",
+    "pytest-mock",
+    "ruff",
+]
 
 [tool.ruff]
 line-length = 120
