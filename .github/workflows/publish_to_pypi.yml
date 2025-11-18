@@ -2,7 +2,6 @@ name: Publish builds on TestPyPI, PyPI and DockerHub
 
 on:
   pull_request:
-    branches: [ $default-branch ]
   push:
     branches: [ $default-branch ]
   release:
@@ -26,7 +25,7 @@ jobs:
       run: uv build --all-packages
 
     - name: Smoke test (wheel)
-      run: uv run --isolated --no-project --with dist/.whl tests/core_smoke_test.py
+      run: uv run --isolated --no-project --with dist/*.whl tests/core_smoke_test.py
 
     - name: Smoke test (source distribution)
       run: uv run --isolated --no-project --with dist/*.tar.gz tests/core_smoke_test.py
@@ -81,6 +80,7 @@ jobs:
       with:
         repository-url: https://test.pypi.org/legacy/
         skip-existing: true
+        verbose: true
 
   publish-to-dockerhub:
     runs-on: ubuntu-latest
