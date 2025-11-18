@@ -135,11 +135,11 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-app = [
-    { name = "gradio" },
-]
 compare = [
     { name = "openai-whisper" },
+]
+web = [
+    { name = "gradio" },
 ]
 
 [package.dev-dependencies]
@@ -152,7 +152,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "gradio", marker = "extra == 'app'", specifier = "==5.29.0" },
+    { name = "gradio", marker = "extra == 'web'", specifier = "==5.29.0" },
     { name = "librosa" },
     { name = "openai-whisper", marker = "extra == 'compare'" },
     { name = "soundfile" },
@@ -160,7 +160,7 @@ requires-dist = [
     { name = "transformers", extras = ["torch"] },
     { name = "tyro" },
 ]
-provides-extras = ["app", "compare"]
+provides-extras = ["web", "compare"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -13,14 +13,16 @@ RUN uv python install 3.13
 
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies first since they change less frequently
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --locked --no-install-project --no-editable
+
+# Install our code
 COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --extra app
+    uv sync --locked --extra web
 
 FROM debian:bookworm-slim
 
@@ -46,4 +48,4 @@ WORKDIR /app
 EXPOSE 7860
 ENV GRADIO_SERVER_NAME="0.0.0.0"
 
-CMD ["python", "-m", "autoipaalign_web.app"]
+CMD ["python", "-m", "autoipaalign.web.app"]
