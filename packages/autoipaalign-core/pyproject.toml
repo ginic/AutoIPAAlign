@@ -11,7 +11,7 @@ dependencies = [
     "tyro",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest",
     "pytest-datadir>=1.8.0",
