@@ -45,7 +45,11 @@ class TranscriptionWithTimestamps:
     """List of individual characters/phones with their timestamps."""
 
 
-def load_audio(audio_path: str | os.PathLike[str], sampling_rate: int, interval: tuple[float, float] | None = None):
+def load_audio(
+    audio_path: str | os.PathLike[str],
+    sampling_rate: int,
+    interval: tuple[float, float] | None = None,
+):
     """Load audio file with optional interval extraction.
 
     Args:
@@ -87,7 +91,11 @@ class ASRPipeline:
             "automatic-speech-recognition", model=self.model_name, device=self.device
         )
 
-    def predict(self, audio_path: str | os.PathLike[str], interval: tuple[float, float] | None = None) -> str:
+    def predict(
+        self,
+        audio_path: str | os.PathLike[str],
+        interval: tuple[float, float] | None = None,
+    ) -> str:
         """Predict transcription for an audio file.
 
         Args:
@@ -103,7 +111,9 @@ class ASRPipeline:
         return transcription
 
     def predict_with_timestamps(
-        self, audio_path: str | os.PathLike[str], interval: tuple[float, float] | None = None
+        self,
+        audio_path: str | os.PathLike[str],
+        interval: tuple[float, float] | None = None,
     ) -> TranscriptionWithTimestamps:
         """Predict transcription with character-level timestamps for an audio file.
 
@@ -115,7 +125,11 @@ class ASRPipeline:
             TranscriptionWithTimestamps containing full text and character-level chunks
         """
         y = load_audio(audio_path, self.sampling_rate, interval)
-        logger.debug("Predicting transcription with timestamps for %s with model %s", audio_path, self.model_name)
+        logger.debug(
+            "Predicting transcription with timestamps for %s with model %s",
+            audio_path,
+            self.model_name,
+        )
         result = self._model_pipe(y, return_timestamps="char")
 
         # Collect TranscriptionChunk objects

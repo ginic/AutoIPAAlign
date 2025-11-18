@@ -6,8 +6,8 @@ from pathlib import Path
 
 import tyro
 
-from autoipaalign_core.textgrid_io import TextGridContainer, write_textgrids_to_target
-from autoipaalign_core.speech_recognition import ASRPipeline
+from autoipaalign.core.textgrid_io import TextGridContainer, write_textgrids_to_target
+from autoipaalign.core.speech_recognition import ASRPipeline
 
 
 logger = logging.getLogger(__name__)
@@ -62,14 +62,21 @@ class Transcribe:
         """Transcribe and write files."""
         if self.output_target.exists():
             if self.output.overwrite:
-                logger.warning("Target %s already exists and may be overwritten.", self.output_target)
+                logger.warning(
+                    "Target %s already exists and may be overwritten.",
+                    self.output_target,
+                )
             else:
                 logger.warning(
                     "Target %s already exists, but cannot be overwritten. Transcriptions may not be saved.",
                     self.output_target,
                 )
 
-        logger.info("Transcribing  %s files with model %s.", len(self.audio_paths), self.asr.model_name)
+        logger.info(
+            "Transcribing  %s files with model %s.",
+            len(self.audio_paths),
+            self.asr.model_name,
+        )
 
         text_grids = []
 
@@ -83,7 +90,13 @@ class Transcribe:
             )
             text_grids.append(tg)
 
-        write_textgrids_to_target(self.audio_paths, text_grids, self.output_target, self.zipped, self.output.overwrite)
+        write_textgrids_to_target(
+            self.audio_paths,
+            text_grids,
+            self.output_target,
+            self.zipped,
+            self.output.overwrite,
+        )
 
 
 @dataclass

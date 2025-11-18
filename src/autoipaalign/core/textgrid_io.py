@@ -16,7 +16,7 @@ import librosa
 import tgt.core
 import tgt.io3
 
-from autoipaalign_core.speech_recognition import ASRPipeline, TranscriptionChunk
+from autoipaalign.core.speech_recognition import ASRPipeline, TranscriptionChunk
 
 logger = logging.getLogger(__name__)
 
@@ -224,7 +224,10 @@ class TextGridContainer:
 
     @classmethod
     def from_audio_and_transcription(
-        cls, audio_in: str | os.PathLike[str], textgrid_tier_name: str, transcription: str
+        cls,
+        audio_in: str | os.PathLike[str],
+        textgrid_tier_name: str,
+        transcription: str,
     ) -> "TextGridContainer":
         """Create a TextGrid with a single tier from audio and transcription.
 
@@ -311,7 +314,8 @@ class TextGridContainer:
                     for chunk in transcription_with_timestamps.chunks:
                         chunk_start, chunk_end = chunk.timestamp
                         adjusted_chunk = TranscriptionChunk(
-                            text=chunk.text, timestamp=(start + chunk_start, start + chunk_end)
+                            text=chunk.text,
+                            timestamp=(start + chunk_start, start + chunk_end),
                         )
                         all_phone_chunks.append(adjusted_chunk)
 
@@ -328,7 +332,12 @@ class TextGridContainer:
                 )
 
             except Exception as e:
-                logger.warning("Error during transcription of interval %s in %s: %s", i, audio_in, e)
+                logger.warning(
+                    "Error during transcription of interval %s in %s: %s",
+                    i,
+                    audio_in,
+                    e,
+                )
                 error_message = f"[Error]: {e}"
                 ipa_tier.add_annotation(tgt.core.Interval(start, end, error_message))
                 if add_phones:
