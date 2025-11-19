@@ -16,8 +16,9 @@ TEXTGRID_NAME_INPUT_LABEL = "TextGrid file name"
 TITLE = "AutoIPA: Automated IPA transcription"
 
 INTRO_BLOCK = f"""# {TITLE}
-Experiment with producing phonetic transcriptions of uploaded or recorded audio using Wav2Vec2.0-based automatic
-speech recognition (ASR) models!
+Experiment with producing
+[International Phonetic Alphabet (IPA)](https://en.wikipedia.org/wiki/International_Phonetic_Alphabet) transcriptions
+of uploaded or recorded audio using Wav2Vec2.0-based automatic speech recognition (ASR) models!
 
 The AutoIPA project is a collaboration between Virginia Partridge of the UMass Center for Data Science and Artificial
 Intelligence and Joe Pater of UMass Linguistics. Its goal is to make automated IPA transcription more useful
