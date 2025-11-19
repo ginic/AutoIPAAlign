@@ -251,7 +251,7 @@ def launch_demo():
             interactive=True,
         )
 
-        phone_aligned = gr.Checkbox(label="Add forced-alignments for predictions in their own TextGrid")
+        phone_aligned = gr.Checkbox(label="Add forced-alignments for predictions in their own TextGrid interval tier")
 
         model_state = gr.State(value=initial_model)
 
