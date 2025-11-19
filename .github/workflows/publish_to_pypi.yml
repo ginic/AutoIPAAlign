@@ -97,6 +97,12 @@ jobs:
       id-token: write
 
     steps:
+    - name: Remove unnecessary files and check disk space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        df . -h
+
     - name: Docker meta
       id: meta
       uses: docker/metadata-action@v5
@@ -121,6 +127,7 @@ jobs:
       with:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
+        no-cache: true
 
     - name: Generate artifact attestation
       uses: actions/attest-build-provenance@v3
