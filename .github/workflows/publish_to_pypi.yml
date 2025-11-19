@@ -90,7 +90,19 @@ jobs:
     environment:
       name: dockerhub
 
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+
     steps:
+    - name: Remove unnecessary files and check disk space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        df . -h
+
     - name: Docker meta
       id: meta
       uses: docker/metadata-action@v5
@@ -111,12 +123,12 @@ jobs:
 
     - name: Build and push
       uses: docker/build-push-action@v6
+      id: push
       with:
-        context: .
-        file: ./Dockerfile
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+        no-cache: true
 
     - name: Generate artifact attestation
       uses: actions/attest-build-provenance@v3
