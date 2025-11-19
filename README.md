@@ -18,7 +18,7 @@ Partridge, Virginia, Joe Pater, Parth Bhangla, Ali Nirheche and Brandon Prickett
 This is project is structured in multiple subpackages based on their different external dependencies:
 - **autoipaalign.core**: Core library and command-line interface for IPA transcription and forced alignments. Always installed.
 - **autoipaalign.compare**: Tools for comparing alignments across different ASR systems, such as whisper and the Montreal Forced Aligner. Install with `pip install autoipaalign[compare]`.
-- **autoipaalign.web**: Gradio web interface for interactive transcription. Install with `pip install autoipaalign[compare]`.
+- **autoipaalign.web**: Gradio web interface for interactive transcription. Install with `pip install autoipaalign[web]`.
 
 ### Basic Installation
 TODO: Pip install instructions coming soon.
